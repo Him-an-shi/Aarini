@@ -19,31 +19,19 @@ firebase_initialized = False
 try:
     import firebase_admin
     from firebase_admin import credentials, auth, firestore
-    import json
 
-    # Check for credentials in env, either as a JSON string or path
-    service_account_json = os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON")
+    # Check for credentials path in environment, fallback to relative path
     cred_path = os.getenv("FIREBASE_CREDENTIALS_PATH", "config/serviceAccountKey.json")
-
-    if service_account_json:
-        try:
-            service_account_info = json.loads(service_account_json)
-            cred = credentials.Certificate(service_account_info)
-            firebase_admin.initialize_app(cred)
-            db = firestore.client()
-            firebase_initialized = True
-            logger.info("Firebase Admin SDK successfully initialized via environment JSON string.")
-        except Exception as json_err:
-            logger.error(f"Error initializing Firebase from JSON string: {str(json_err)}")
-    elif os.path.exists(cred_path):
+    
+    if os.path.exists(cred_path):
         cred = credentials.Certificate(cred_path)
         firebase_admin.initialize_app(cred)
         db = firestore.client()
         firebase_initialized = True
-        logger.info(f"Firebase Admin SDK successfully initialized via certificate file: {cred_path}")
+        logger.info("Firebase Admin SDK successfully initialized.")
     else:
         logger.warning(
-            f"Firebase service account key not found at '{cred_path}' and FIREBASE_SERVICE_ACCOUNT_JSON not set. "
+            f"Firebase service account key not found at '{cred_path}'. "
             "Running backend in mock/development mode. Fill in configuration keys to connect Firebase."
         )
 except Exception as e:

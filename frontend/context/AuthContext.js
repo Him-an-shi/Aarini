@@ -4,8 +4,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // Define the context
 const AuthContext = createContext();
 
-// Define backend URL (use standard Android emulator host 10.0.2.2 or local port)
-const BACKEND_URL = 'http://10.117.86.186:5000'; // Fallback localhost, can be changed dynamically
+// Define backend URL (use standard Android emulator host 10.0.2.2 or local port, or env variable)
+const BACKEND_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.117.86.186:5000'; // Fallback localhost, can be changed dynamically
 
 export const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);

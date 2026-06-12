@@ -1,12 +1,13 @@
-import React, { useEffect, useRef } from 'react';
-import { StyleSheet, View, Text, Animated, ActivityIndicator, Dimensions } from 'react-native';
+import React, { useEffect, useMemo, useRef } from 'react';
+import { StyleSheet, View, Text, Animated, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { COLORS, TYPOGRAPHY } from '../constants/theme';
 import { Flower } from 'lucide-react-native';
-
-const { width } = Dimensions.get('window');
+import { useTheme } from '../context/ThemeContext';
 
 export const SplashScreen = ({ navigation }) => {
+  const { theme } = useTheme();
+  const { colors, typography } = theme;
+  const styles = useMemo(() => createStyles(theme), [theme]);
   // Animation values for smooth welcome fades
   const logoOpacity = useRef(new Animated.Value(0)).current;
   const logoScale = useRef(new Animated.Value(0.85)).current;
@@ -45,7 +46,7 @@ export const SplashScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={[COLORS.white, COLORS.primaryLight, COLORS.primary]}
+        colors={theme.splashGradient}
         style={styles.background}
         start={{ x: 0.1, y: 0.1 }}
         end={{ x: 0.9, y: 0.9 }}
@@ -59,22 +60,22 @@ export const SplashScreen = ({ navigation }) => {
             ]}
           >
             <View style={styles.flowerIcon}>
-              <Flower size={48} color={COLORS.textOnPrimary} strokeWidth={1.5} />
+              <Flower size={48} color={colors.primaryDark} strokeWidth={1.5} />
             </View>
           </Animated.View>
 
           {/* Text Fades */}
           <Animated.View style={[styles.textContainer, { opacity: textOpacity }]}>
-            <Text style={[TYPOGRAPHY.h1, styles.brandName]}>Aarini</Text>
-            <Text style={[TYPOGRAPHY.bodyLarge, styles.tagline]}>
+            <Text style={[typography.h1, styles.brandName]}>Aarini</Text>
+            <Text style={[typography.bodyLarge, styles.tagline]}>
               Hormonal Wellness & Period Companion
             </Text>
           </Animated.View>
 
           {/* Safe Private Indicator */}
           <Animated.View style={[styles.footerContainer, { opacity: textOpacity }]}>
-            <ActivityIndicator size="small" color={COLORS.primaryDark} style={styles.loader} />
-            <Text style={[TYPOGRAPHY.caption, styles.secureLabel]}>
+            <ActivityIndicator size="small" color={colors.primaryDark} style={styles.loader} />
+            <Text style={[typography.caption, styles.secureLabel]}>
               🔒 Secure, private, and encrypted
             </Text>
           </Animated.View>
@@ -84,7 +85,7 @@ export const SplashScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = ({ colors }) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -102,18 +103,18 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     marginBottom: 24,
-    shadowColor: COLORS.primaryDark,
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.22,
     shadowRadius: 16,
     elevation: 5,
   },
   flowerIcon: {
-    backgroundColor: COLORS.white,
+    backgroundColor: colors.cardBackground,
     padding: 24,
     borderRadius: 36,
     borderWidth: 2,
-    borderColor: COLORS.primary,
+    borderColor: colors.border,
   },
   textContainer: {
     alignItems: 'center',
@@ -122,13 +123,13 @@ const styles = StyleSheet.create({
   brandName: {
     fontSize: 42,
     fontWeight: '700',
-    letterSpacing: 2,
+    letterSpacing: 0,
     marginBottom: 8,
-    color: COLORS.textDark,
+    color: colors.textDark,
   },
   tagline: {
     textAlign: 'center',
-    color: COLORS.textMedium,
+    color: colors.textMedium,
     fontSize: 15,
     paddingHorizontal: 20,
   },
@@ -141,6 +142,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   secureLabel: {
-    color: COLORS.textLight,
+    color: colors.textLight,
   },
 });

@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useAuth } from '../context/AuthContext';
-import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 import { Button } from '../components/Button';
 
 // Import Screens
@@ -18,24 +18,27 @@ const Stack = createStackNavigator();
 // Temporary Dashboard Placeholder to complete the Authentication flow beautifully
 const DashboardPlaceholder = () => {
   const { user, logout } = useAuth();
+  const { theme } = useTheme();
+  const { colors, typography } = theme;
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   return (
     <SafeAreaView style={styles.dashboardContainer}>
       <View style={styles.dashboardContent}>
-        <Text style={[TYPOGRAPHY.caption, styles.tag]}>🌿 MVP CORE ACTIVE</Text>
-        <Text style={[TYPOGRAPHY.h1, styles.title]}>Hello, {user?.name || 'Jane'} ✨</Text>
-        <Text style={[TYPOGRAPHY.bodyLarge, styles.subtitle]}>
+        <Text style={[typography.caption, styles.tag]}>🌿 MVP CORE ACTIVE</Text>
+        <Text style={[typography.h1, styles.title]}>Hello, {user?.name || 'Jane'} ✨</Text>
+        <Text style={[typography.bodyLarge, styles.subtitle]}>
           Welcome to your customized Aarini hormonal wellness space.
         </Text>
 
         <View style={styles.card}>
-          <Text style={[TYPOGRAPHY.h3, styles.cardTitle]}>Cycle Status Calibration</Text>
+          <Text style={[typography.h3, styles.cardTitle]}>Cycle Status Calibration</Text>
           <View style={styles.specRow}>
-            <Text style={TYPOGRAPHY.bodyMedium}>Age Profile:</Text>
+            <Text style={typography.bodyMedium}>Age Profile:</Text>
             <Text style={styles.specVal}>{user?.age || '25'} years old</Text>
           </View>
           <View style={styles.specRow}>
-            <Text style={TYPOGRAPHY.bodyMedium}>Typical Cycle Length:</Text>
+            <Text style={typography.bodyMedium}>Typical Cycle Length:</Text>
             <Text style={styles.specVal}>{user?.cycleLength || '28'} days</Text>
           </View>
           <Text style={styles.successNote}>
@@ -47,7 +50,7 @@ const DashboardPlaceholder = () => {
           title="Sign Out" 
           variant="outline"
           onPress={logout} 
-          style={styles.logoutBtn}
+          style={[styles.logoutBtn, { borderColor: colors.secondaryDark }]}
         />
       </View>
     </SafeAreaView>
@@ -71,95 +74,107 @@ const AppStack = () => (
 
 export const AppNavigator = () => {
   const { userToken, isLoading } = useAuth();
+  const { theme } = useTheme();
+  const { typography } = theme;
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const navigationTheme = useMemo(() => ({
+    ...(theme.isDark ? DarkTheme : DefaultTheme),
+    colors: {
+      ...(theme.isDark ? DarkTheme.colors : DefaultTheme.colors),
+      ...theme.navigation.colors,
+    },
+  }), [theme]);
 
   // Simple clean Loading page while checking storage token restore
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <Text style={TYPOGRAPHY.bodyMedium}>Synchronizing wellness state...</Text>
+        <Text style={typography.bodyMedium}>Synchronizing wellness state...</Text>
       </View>
     );
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={navigationTheme}>
       {userToken ? <AppStack /> : <AuthStack />}
     </NavigationContainer>
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = ({ colors, isDark, typography, spacing }) => StyleSheet.create({
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   dashboardContainer: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   dashboardContent: {
     flex: 1,
-    padding: SPACING.lg,
+    padding: spacing.lg,
     justifyContent: 'center',
     alignItems: 'center',
   },
   tag: {
-    color: COLORS.primaryDark,
+    color: colors.primaryDark,
     fontWeight: '700',
-    marginBottom: SPACING.sm,
-    letterSpacing: 1,
+    marginBottom: spacing.sm,
+    letterSpacing: 0,
   },
   title: {
     fontSize: 28,
     textAlign: 'center',
-    marginBottom: SPACING.xs,
+    marginBottom: spacing.xs,
   },
   subtitle: {
     textAlign: 'center',
-    color: COLORS.textMedium,
-    marginBottom: SPACING.xl,
-    paddingHorizontal: SPACING.md,
+    color: colors.textMedium,
+    marginBottom: spacing.xl,
+    paddingHorizontal: spacing.md,
   },
   card: {
-    backgroundColor: COLORS.white,
+    backgroundColor: colors.cardBackground,
     borderRadius: 24,
-    padding: SPACING.lg,
+    padding: spacing.lg,
     width: '100%',
-    shadowColor: COLORS.primaryDark,
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.16,
     shadowRadius: 16,
     elevation: 4,
-    marginBottom: SPACING.xl,
+    marginBottom: spacing.xl,
   },
   cardTitle: {
-    marginBottom: SPACING.md,
-    color: COLORS.textDark,
+    marginBottom: spacing.md,
+    color: colors.textDark,
   },
   specRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: SPACING.xs,
+    paddingVertical: spacing.xs,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.primaryLight,
+    borderBottomColor: colors.border,
   },
   specVal: {
-    ...TYPOGRAPHY.bodyMedium,
-    color: COLORS.textDark,
+    ...typography.bodyMedium,
+    color: colors.textDark,
     fontWeight: '700',
   },
   successNote: {
-    ...TYPOGRAPHY.bodySmall,
-    color: COLORS.textMedium,
+    ...typography.bodySmall,
+    color: colors.textMedium,
     lineHeight: 18,
-    backgroundColor: COLORS.success,
-    padding: SPACING.md,
+    backgroundColor: isDark ? colors.mutedBackground : colors.success,
+    borderWidth: 1,
+    borderColor: isDark ? colors.border : colors.success,
+    padding: spacing.md,
     borderRadius: 12,
-    marginTop: SPACING.md,
+    marginTop: spacing.md,
   },
   logoutBtn: {
-    borderColor: COLORS.secondaryDark,
+    borderColor: colors.secondaryDark,
   },
 });

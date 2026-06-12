@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { 
   StyleSheet, 
   View, 
@@ -9,14 +9,17 @@ import {
   TouchableOpacity 
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 import { InputField } from '../components/InputField';
 import { Button } from '../components/Button';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { Mail, CheckCircle2, ChevronLeft } from 'lucide-react-native';
 
 export const ForgotPasswordScreen = ({ navigation }) => {
   const { resetPassword, isLoading, error: authError } = useAuth();
+  const { theme } = useTheme();
+  const { colors, typography } = theme;
+  const styles = useMemo(() => createStyles(theme), [theme]);
   
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState(null);
@@ -55,7 +58,7 @@ export const ForgotPasswordScreen = ({ navigation }) => {
       style={styles.container}
     >
       <LinearGradient
-        colors={[COLORS.background, COLORS.primaryLight]}
+        colors={theme.gradient}
         style={styles.background}
       >
         <ScrollView 
@@ -68,7 +71,7 @@ export const ForgotPasswordScreen = ({ navigation }) => {
             style={styles.backButton}
             activeOpacity={0.7}
           >
-            <ChevronLeft size={24} color={COLORS.textDark} />
+            <ChevronLeft size={24} color={colors.textDark} />
             <Text style={styles.backText}>Back</Text>
           </TouchableOpacity>
 
@@ -78,10 +81,10 @@ export const ForgotPasswordScreen = ({ navigation }) => {
               // Phase 1: Request Form
               <View style={styles.card}>
                 <View style={styles.iconBadge}>
-                  <Mail size={24} color={COLORS.primaryDark} />
+                  <Mail size={24} color={colors.primaryDark} />
                 </View>
-                <Text style={[TYPOGRAPHY.h1, styles.title]}>Reset Password</Text>
-                <Text style={[TYPOGRAPHY.bodyLarge, styles.subtitle]}>
+                <Text style={[typography.h1, styles.title]}>Reset Password</Text>
+                <Text style={[typography.bodyLarge, styles.subtitle]}>
                   Enter the email address linked with your Aarini profile, and we will dispatch a secure reset link.
                 </Text>
 
@@ -105,14 +108,14 @@ export const ForgotPasswordScreen = ({ navigation }) => {
               // Phase 2: Recovery Link Sent Success Display
               <View style={[styles.card, styles.successCard]}>
                 <View style={styles.successBadge}>
-                  <CheckCircle2 size={40} color={COLORS.successDark} />
+                  <CheckCircle2 size={40} color={colors.successDark} />
                 </View>
-                <Text style={[TYPOGRAPHY.h1, styles.title]}>Check Your Inbox</Text>
-                <Text style={[TYPOGRAPHY.bodyLarge, styles.subtitle]}>
+                <Text style={[typography.h1, styles.title]}>Check Your Inbox</Text>
+                <Text style={[typography.bodyLarge, styles.subtitle]}>
                   A password restoration link has been transmitted successfully to:{'\n'}
                   <Text style={styles.successEmail}>{email}</Text>
                 </Text>
-                <Text style={[TYPOGRAPHY.bodySmall, styles.noteText]}>
+                <Text style={[typography.bodySmall, styles.noteText]}>
                   If you do not see the message in a couple of minutes, please check your spam folder.
                 </Text>
 
@@ -130,7 +133,7 @@ export const ForgotPasswordScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = ({ colors, typography, spacing }) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -139,7 +142,7 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     flexGrow: 1,
-    paddingHorizontal: SPACING.lg,
+    paddingHorizontal: spacing.lg,
     paddingTop: 50,
     paddingBottom: 40,
   },
@@ -147,12 +150,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    paddingVertical: SPACING.sm,
-    marginBottom: SPACING.lg,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.lg,
   },
   backText: {
-    ...TYPOGRAPHY.bodyMedium,
-    color: COLORS.textDark,
+    ...typography.bodyMedium,
+    color: colors.textDark,
     fontWeight: '600',
     marginLeft: 2,
   },
@@ -161,59 +164,59 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   card: {
-    backgroundColor: COLORS.white,
+    backgroundColor: colors.cardBackground,
     borderRadius: 24,
-    padding: SPACING.lg,
+    padding: spacing.lg,
     alignItems: 'center',
-    shadowColor: COLORS.primaryDark,
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.16,
     shadowRadius: 16,
     elevation: 4,
   },
   successCard: {
-    borderColor: COLORS.primary,
+    borderColor: colors.border,
     borderWidth: 1,
   },
   iconBadge: {
-    backgroundColor: COLORS.primaryLight,
-    padding: SPACING.md,
+    backgroundColor: colors.mutedBackground,
+    padding: spacing.md,
     borderRadius: 20,
-    marginBottom: SPACING.md,
+    marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: COLORS.primary,
+    borderColor: colors.border,
   },
   successBadge: {
-    backgroundColor: COLORS.success,
-    padding: SPACING.md,
+    backgroundColor: colors.success,
+    padding: spacing.md,
     borderRadius: 30,
-    marginBottom: SPACING.md,
+    marginBottom: spacing.md,
   },
   title: {
     fontSize: 26,
     fontWeight: '700',
-    color: COLORS.textDark,
-    marginBottom: SPACING.sm,
+    color: colors.textDark,
+    marginBottom: spacing.sm,
     textAlign: 'center',
   },
   subtitle: {
     textAlign: 'center',
-    color: COLORS.textMedium,
-    marginBottom: SPACING.lg,
+    color: colors.textMedium,
+    marginBottom: spacing.lg,
     lineHeight: 22,
   },
   successEmail: {
-    color: COLORS.textDark,
+    color: colors.textDark,
     fontWeight: '700',
   },
   noteText: {
     textAlign: 'center',
-    color: COLORS.textLight,
+    color: colors.textLight,
     lineHeight: 18,
-    backgroundColor: COLORS.background,
-    padding: SPACING.md,
+    backgroundColor: colors.mutedBackground,
+    padding: spacing.md,
     borderRadius: 12,
-    marginBottom: SPACING.lg,
+    marginBottom: spacing.lg,
     width: '100%',
   },
   submitButton: {

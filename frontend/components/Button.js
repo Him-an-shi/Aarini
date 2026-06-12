@@ -1,6 +1,6 @@
-import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
-import { COLORS, TYPOGRAPHY, BORDER_RADIUS, SHADOWS, SPACING } from '../constants/theme';
+import React, { useMemo } from 'react';
+import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, View } from 'react-native';
+import { useTheme } from '../context/ThemeContext';
 
 export const Button = ({
   onPress,
@@ -12,6 +12,12 @@ export const Button = ({
   textStyle = {},
   icon,
 }) => {
+  const { theme } = useTheme();
+  const { colors, typography, borderRadius, shadows, spacing } = theme;
+  const styles = useMemo(
+    () => createStyles(colors, borderRadius, shadows, spacing),
+    [borderRadius, colors, shadows, spacing]
+  );
   const isPrimary = variant === 'primary';
   const isSecondary = variant === 'secondary';
   const isOutline = variant === 'outline';
@@ -28,7 +34,7 @@ export const Button = ({
   ];
 
   const labelStyles = [
-    TYPOGRAPHY.buttonText,
+    typography.buttonText,
     isPrimary && styles.primaryLabel,
     isSecondary && styles.secondaryLabel,
     isOutline && styles.outlineLabel,
@@ -47,11 +53,11 @@ export const Button = ({
       {loading ? (
         <ActivityIndicator 
           size="small" 
-          color={isPrimary ? COLORS.textOnPrimary : COLORS.primaryDark} 
+          color={isPrimary ? colors.textOnPrimary : colors.primaryDark} 
         />
       ) : (
         <>
-          {icon && <span style={styles.iconContainer}>{icon}</span>}
+          {icon && <View style={styles.iconContainer}>{icon}</View>}
           <Text style={labelStyles}>{title}</Text>
         </>
       )}
@@ -59,60 +65,60 @@ export const Button = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors, borderRadius, shadows, spacing) => StyleSheet.create({
   base: {
     height: 56,
-    borderRadius: BORDER_RADIUS.xl,
+    borderRadius: borderRadius.xl,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: SPACING.lg,
-    marginVertical: SPACING.sm,
+    paddingHorizontal: spacing.lg,
+    marginVertical: spacing.sm,
     width: '100%',
   },
   primary: {
-    backgroundColor: COLORS.primaryDark,
-    ...SHADOWS.light,
+    backgroundColor: colors.primaryDark,
+    ...shadows.light,
   },
   secondary: {
-    backgroundColor: COLORS.secondary,
-    ...SHADOWS.light,
+    backgroundColor: colors.secondary,
+    ...shadows.light,
   },
   outline: {
     backgroundColor: 'transparent',
     borderWidth: 2,
-    borderColor: COLORS.primaryDark,
+    borderColor: colors.primaryDark,
   },
   text: {
     backgroundColor: 'transparent',
     height: 'auto',
     paddingHorizontal: 0,
-    marginVertical: SPACING.xs,
+    marginVertical: spacing.xs,
     width: 'auto',
   },
   disabled: {
-    backgroundColor: '#F3F0FC',
-    borderColor: '#E6E2F8',
+    backgroundColor: colors.mutedBackground,
+    borderColor: colors.border,
     shadowOpacity: 0,
     elevation: 0,
   },
   primaryLabel: {
-    color: COLORS.white,
+    color: colors.textOnPrimary,
   },
   secondaryLabel: {
-    color: COLORS.textOnPrimary,
+    color: colors.textOnSoft,
   },
   outlineLabel: {
-    color: COLORS.primaryDark,
+    color: colors.primaryDark,
   },
   textLabel: {
-    color: COLORS.primaryDark,
+    color: colors.primaryDark,
     fontSize: 14,
   },
   disabledLabel: {
-    color: COLORS.textLight,
+    color: colors.textLight,
   },
   iconContainer: {
-    marginRight: SPACING.sm,
+    marginRight: spacing.sm,
   },
 });

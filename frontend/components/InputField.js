@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity } from 'react-native';
-import { COLORS, TYPOGRAPHY, BORDER_RADIUS, SPACING } from '../constants/theme';
 import { Eye, EyeOff } from 'lucide-react-native';
+import { useTheme } from '../context/ThemeContext';
 
 export const InputField = ({
   label,
@@ -16,6 +16,12 @@ export const InputField = ({
   inputStyle = {},
   ...props
 }) => {
+  const { theme } = useTheme();
+  const { colors, typography, borderRadius, spacing } = theme;
+  const styles = useMemo(
+    () => createStyles(colors, typography, borderRadius, spacing),
+    [borderRadius, colors, spacing, typography]
+  );
   const [isFocused, setIsFocused] = useState(false);
   const [isPasswordVisible, setIsPasswordVisible] = useState(!secureTextEntry);
 
@@ -40,11 +46,11 @@ export const InputField = ({
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          placeholderTextColor={COLORS.textLight}
+          placeholderTextColor={colors.textLight}
           secureTextEntry={secureTextEntry && !isPasswordVisible}
           keyboardType={keyboardType}
           autoCapitalize={autoCapitalize}
-          style={[styles.input, TYPOGRAPHY.bodyLarge, inputStyle]}
+          style={[styles.input, typography.bodyLarge, inputStyle]}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           {...props}
@@ -57,9 +63,9 @@ export const InputField = ({
             style={styles.eyeButton}
           >
             {isPasswordVisible ? (
-              <EyeOff size={20} color={COLORS.textMedium} />
+              <EyeOff size={20} color={colors.textMedium} />
             ) : (
-              <Eye size={20} color={COLORS.textMedium} />
+              <Eye size={20} color={colors.textMedium} />
             )}
           </TouchableOpacity>
         )}
@@ -70,50 +76,50 @@ export const InputField = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors, typography, borderRadius, spacing) => StyleSheet.create({
   container: {
     width: '100%',
-    marginVertical: SPACING.sm,
+    marginVertical: spacing.sm,
   },
   label: {
-    ...TYPOGRAPHY.bodySmall,
-    color: COLORS.textMedium,
+    ...typography.bodySmall,
+    color: colors.textMedium,
     fontWeight: '600',
-    marginBottom: SPACING.xs,
-    marginLeft: SPACING.xs,
+    marginBottom: spacing.xs,
+    marginLeft: spacing.xs,
   },
   inputContainer: {
     height: 56,
-    borderRadius: BORDER_RADIUS.md,
-    backgroundColor: COLORS.white,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.inputBackground,
     borderWidth: 1.5,
-    borderColor: '#E6E2F8',
+    borderColor: colors.border,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: SPACING.md,
+    paddingHorizontal: spacing.md,
     overflow: 'hidden',
   },
   focusedBorder: {
-    borderColor: COLORS.primaryDark,
-    backgroundColor: COLORS.white,
+    borderColor: colors.primaryDark,
+    backgroundColor: colors.inputBackground,
   },
   errorBorder: {
-    borderColor: COLORS.secondaryDark,
-    backgroundColor: COLORS.error,
+    borderColor: colors.errorDark,
+    backgroundColor: colors.error,
   },
   input: {
     flex: 1,
     height: '100%',
-    color: COLORS.textDark,
+    color: colors.textDark,
   },
   eyeButton: {
-    padding: SPACING.xs,
+    padding: spacing.xs,
   },
   errorText: {
-    ...TYPOGRAPHY.bodySmall,
-    color: COLORS.secondaryDark,
+    ...typography.bodySmall,
+    color: colors.errorDark,
     fontWeight: '500',
-    marginTop: SPACING.xs,
-    marginLeft: SPACING.xs,
+    marginTop: spacing.xs,
+    marginLeft: spacing.xs,
   },
 });

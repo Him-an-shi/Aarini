@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { 
   StyleSheet, 
   View, 
@@ -10,14 +10,17 @@ import {
   Alert 
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 import { InputField } from '../components/InputField';
 import { Button } from '../components/Button';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { Heart } from 'lucide-react-native';
 
 export const SignupScreen = ({ navigation }) => {
   const { signup, isLoading, error: authError } = useAuth();
+  const { theme } = useTheme();
+  const { colors, typography } = theme;
+  const styles = useMemo(() => createStyles(theme), [theme]);
   
   // Step state (1: Account info, 2: Wellness specs)
   const [step, setStep] = useState(1);
@@ -113,7 +116,7 @@ export const SignupScreen = ({ navigation }) => {
       style={styles.container}
     >
       <LinearGradient
-        colors={[COLORS.background, COLORS.primaryLight]}
+        colors={theme.gradient}
         style={styles.background}
       >
         <ScrollView 
@@ -129,12 +132,12 @@ export const SignupScreen = ({ navigation }) => {
           {/* Header Section */}
           <View style={styles.header}>
             <View style={styles.iconBadge}>
-              <Heart size={24} color={COLORS.secondaryDark} />
+              <Heart size={24} color={colors.secondaryDark} />
             </View>
-            <Text style={[TYPOGRAPHY.h1, styles.title]}>
+            <Text style={[typography.h1, styles.title]}>
               {step === 1 ? 'Create Account' : 'About Your Cycle'}
             </Text>
-            <Text style={[TYPOGRAPHY.bodyLarge, styles.subtitle]}>
+            <Text style={[typography.bodyLarge, styles.subtitle]}>
               {step === 1 
                 ? 'Join Aarini to understand and support your hormonal patterns.' 
                 : 'Help us calibrate predictions for period forecasts and insights.'
@@ -240,7 +243,7 @@ export const SignupScreen = ({ navigation }) => {
 
           {/* Switch back to Login option */}
           <View style={styles.footer}>
-            <Text style={[TYPOGRAPHY.bodyMedium, styles.footerText]}>
+            <Text style={[typography.bodyMedium, styles.footerText]}>
               Already have an account?{' '}
             </Text>
             <TouchableOpacity 
@@ -256,7 +259,7 @@ export const SignupScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = ({ colors, typography, spacing }) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -266,7 +269,7 @@ const styles = StyleSheet.create({
   scrollContainer: {
     flexGrow: 1,
     justifyContent: 'center',
-    paddingHorizontal: SPACING.lg,
+    paddingHorizontal: spacing.lg,
     paddingTop: 50,
     paddingBottom: 40,
   },
@@ -274,68 +277,68 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 8,
-    marginBottom: SPACING.md,
+    marginBottom: spacing.md,
   },
   progressBar: {
     height: 6,
     width: 48,
     borderRadius: 3,
-    backgroundColor: '#E6E2F8',
+    backgroundColor: colors.border,
   },
   activeProgress: {
-    backgroundColor: COLORS.primaryDark,
+    backgroundColor: colors.primaryDark,
   },
   header: {
     alignItems: 'center',
-    marginBottom: SPACING.lg,
+    marginBottom: spacing.lg,
   },
   iconBadge: {
-    backgroundColor: COLORS.white,
-    padding: SPACING.md,
+    backgroundColor: colors.cardBackground,
+    padding: spacing.md,
     borderRadius: 20,
-    marginBottom: SPACING.md,
+    marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: COLORS.secondary,
+    borderColor: colors.secondary,
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: COLORS.textDark,
-    marginBottom: SPACING.xs,
+    color: colors.textDark,
+    marginBottom: spacing.xs,
   },
   subtitle: {
     textAlign: 'center',
-    color: COLORS.textMedium,
+    color: colors.textMedium,
     paddingHorizontal: 20,
   },
   form: {
-    backgroundColor: COLORS.white,
+    backgroundColor: colors.cardBackground,
     borderRadius: 24,
-    padding: SPACING.lg,
-    shadowColor: COLORS.primaryDark,
+    padding: spacing.lg,
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.16,
     shadowRadius: 16,
     elevation: 4,
   },
   submitButton: {
-    marginTop: SPACING.md,
+    marginTop: spacing.md,
   },
   helperText: {
-    ...TYPOGRAPHY.bodySmall,
-    color: COLORS.textMedium,
+    ...typography.bodySmall,
+    color: colors.textMedium,
     lineHeight: 16,
-    backgroundColor: COLORS.primaryLight,
-    padding: SPACING.md,
+    backgroundColor: colors.mutedBackground,
+    padding: spacing.md,
     borderRadius: 12,
-    marginTop: SPACING.xs,
-    marginBottom: SPACING.md,
+    marginTop: spacing.xs,
+    marginBottom: spacing.md,
   },
   btnRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: SPACING.md,
-    marginTop: SPACING.sm,
+    gap: spacing.md,
+    marginTop: spacing.sm,
   },
   halfBtn: {
     flex: 1,
@@ -344,14 +347,14 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: SPACING.xl,
+    marginTop: spacing.xl,
   },
   footerText: {
-    color: COLORS.textMedium,
+    color: colors.textMedium,
   },
   loginLink: {
-    ...TYPOGRAPHY.bodyMedium,
-    color: COLORS.primaryDark,
+    ...typography.bodyMedium,
+    color: colors.primaryDark,
     fontWeight: '700',
   },
 });

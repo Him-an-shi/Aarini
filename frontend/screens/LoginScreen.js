@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { 
   StyleSheet, 
   View, 
@@ -10,14 +10,17 @@ import {
   Alert 
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 import { InputField } from '../components/InputField';
 import { Button } from '../components/Button';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { Sparkles } from 'lucide-react-native';
 
 export const LoginScreen = ({ navigation }) => {
   const { login, isLoading, error: authError } = useAuth();
+  const { theme } = useTheme();
+  const { colors, typography } = theme;
+  const styles = useMemo(() => createStyles(theme), [theme]);
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -79,7 +82,7 @@ export const LoginScreen = ({ navigation }) => {
       style={styles.container}
     >
       <LinearGradient
-        colors={[COLORS.background, COLORS.primaryLight]}
+        colors={theme.gradient}
         style={styles.background}
       >
         <ScrollView 
@@ -89,10 +92,10 @@ export const LoginScreen = ({ navigation }) => {
           {/* Header Section */}
           <View style={styles.header}>
             <View style={styles.iconBadge}>
-              <Sparkles size={24} color={COLORS.primaryDark} />
+              <Sparkles size={24} color={colors.primaryDark} />
             </View>
-            <Text style={[TYPOGRAPHY.h1, styles.title]}>Welcome Back</Text>
-            <Text style={[TYPOGRAPHY.bodyLarge, styles.subtitle]}>
+            <Text style={[typography.h1, styles.title]}>Welcome Back</Text>
+            <Text style={[typography.bodyLarge, styles.subtitle]}>
               Step into your safe, mindful wellness space.
             </Text>
           </View>
@@ -144,7 +147,7 @@ export const LoginScreen = ({ navigation }) => {
 
           {/* Bottom Onboarding Switch Link */}
           <View style={styles.footer}>
-            <Text style={[TYPOGRAPHY.bodyMedium, styles.footerText]}>
+            <Text style={[typography.bodyMedium, styles.footerText]}>
               New to Aarini?{' '}
             </Text>
             <TouchableOpacity 
@@ -160,7 +163,7 @@ export const LoginScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = ({ colors, typography, spacing }) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -170,79 +173,79 @@ const styles = StyleSheet.create({
   scrollContainer: {
     flexGrow: 1,
     justifyContent: 'center',
-    paddingHorizontal: SPACING.lg,
+    paddingHorizontal: spacing.lg,
     paddingTop: 60,
     paddingBottom: 40,
   },
   header: {
     alignItems: 'center',
-    marginBottom: SPACING.xl,
+    marginBottom: spacing.xl,
   },
   iconBadge: {
-    backgroundColor: COLORS.white,
-    padding: SPACING.md,
+    backgroundColor: colors.cardBackground,
+    padding: spacing.md,
     borderRadius: 20,
-    marginBottom: SPACING.md,
+    marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: COLORS.primary,
+    borderColor: colors.border,
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: COLORS.textDark,
-    marginBottom: SPACING.xs,
+    color: colors.textDark,
+    marginBottom: spacing.xs,
   },
   subtitle: {
     textAlign: 'center',
-    color: COLORS.textMedium,
+    color: colors.textMedium,
     paddingHorizontal: 20,
   },
   form: {
-    backgroundColor: COLORS.white,
+    backgroundColor: colors.cardBackground,
     borderRadius: 24,
-    padding: SPACING.lg,
-    shadowColor: COLORS.primaryDark,
+    padding: spacing.lg,
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.16,
     shadowRadius: 16,
     elevation: 4,
   },
   forgotContainer: {
     alignSelf: 'flex-end',
-    marginVertical: SPACING.xs,
+    marginVertical: spacing.xs,
   },
   forgotText: {
-    ...TYPOGRAPHY.bodySmall,
-    color: COLORS.primaryDark,
+    ...typography.bodySmall,
+    color: colors.primaryDark,
     fontWeight: '600',
   },
   submitButton: {
-    marginTop: SPACING.md,
+    marginTop: spacing.md,
   },
   demoBanner: {
-    backgroundColor: COLORS.primaryLight,
-    padding: SPACING.sm,
+    backgroundColor: colors.mutedBackground,
+    padding: spacing.sm,
     borderRadius: 12,
-    marginTop: SPACING.md,
+    marginTop: spacing.md,
     borderWidth: 1,
-    borderColor: COLORS.primary,
+    borderColor: colors.border,
   },
   demoText: {
-    ...TYPOGRAPHY.bodySmall,
-    color: COLORS.textOnPrimary,
+    ...typography.bodySmall,
+    color: colors.textOnSoft,
     textAlign: 'center',
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: SPACING.xl,
+    marginTop: spacing.xl,
   },
   footerText: {
-    color: COLORS.textMedium,
+    color: colors.textMedium,
   },
   signupLink: {
-    ...TYPOGRAPHY.bodyMedium,
-    color: COLORS.primaryDark,
+    ...typography.bodyMedium,
+    color: colors.primaryDark,
     fontWeight: '700',
   },
 });

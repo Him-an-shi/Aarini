@@ -193,8 +193,48 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Update profile — persists to backend when reachable, always updates
+  // local state + AsyncStorage so edits survive restarts (offline-first,
+  // consistent with the login/signup pattern above).
+  const updateProfile = async (updates) => {
+    setError(null);
+    try {
+      // Build the next user object from current state + the provided updates.
+      const nextUser = {
+        ...user,
+        ...updates,
+        age: updates.age !== undefined ? parseInt(updates.age, 10) || user?.age : user?.age,
+        cycleLength:
+          updates.cycleLength !== undefined
+            ? parseInt(updates.cycleLength, 10) || user?.cycleLength
+            : user?.cycleLength,
+      };
+
+      // Best-effort backend sync; never blocks the local update if it fails.
+      try {
+        await fetch(`${BACKEND_URL}/update-profile`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${userToken}`,
+          },
+          body: JSON.stringify(nextUser),
+        });
+      } catch (syncError) {
+        console.warn('Profile backend sync failed, saved locally instead:', syncError.message);
+      }
+
+      setUser(nextUser);
+      await AsyncStorage.setItem('user', JSON.stringify(nextUser));
+      return true;
+    } catch (e) {
+      setError(e.message || 'Failed to update profile.');
+      return false;
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ isLoading, userToken, user, error, login, signup, logout, resetPassword }}>
+    <AuthContext.Provider value={{ isLoading, userToken, user, error, login, signup, logout, resetPassword, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );

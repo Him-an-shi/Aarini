@@ -11,12 +11,14 @@ import { SplashScreen } from '../screens/SplashScreen';
 import { LoginScreen } from '../screens/LoginScreen';
 import { SignupScreen } from '../screens/SignupScreen';
 import { ForgotPasswordScreen } from '../screens/ForgotPasswordScreen';
+import { ProfileScreen } from '../screens/ProfileScreen';
+import { InsightsScreen } from '../screens/InsightsScreen';
 
 // Stack instances
 const Stack = createStackNavigator();
 
 // Temporary Dashboard Placeholder to complete the Authentication flow beautifully
-const DashboardPlaceholder = () => {
+const DashboardPlaceholder = ({ navigation }) => {
   const { user, logout } = useAuth();
   const { theme } = useTheme();
   const { colors, typography } = theme;
@@ -47,6 +49,19 @@ const DashboardPlaceholder = () => {
         </View>
 
         <Button 
+          title="View Profile" 
+          onPress={() => navigation.navigate('Profile')} 
+          style={styles.navBtn}
+        />
+
+        <Button 
+          title="Wellness Insights" 
+          variant="secondary"
+          onPress={() => navigation.navigate('Insights')} 
+          style={styles.navBtn}
+        />
+
+        <Button 
           title="Sign Out" 
           variant="outline"
           onPress={logout} 
@@ -69,6 +84,8 @@ const AuthStack = () => (
 const AppStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
     <Stack.Screen name="Dashboard" component={DashboardPlaceholder} />
+    <Stack.Screen name="Profile" component={ProfileScreen} />
+    <Stack.Screen name="Insights" component={InsightsScreen} />
   </Stack.Navigator>
 );
 
@@ -174,7 +191,11 @@ const createStyles = ({ colors, isDark, typography, spacing }) => StyleSheet.cre
     borderRadius: 12,
     marginTop: spacing.md,
   },
+  navBtn: {
+    marginBottom: spacing.sm,
+  },
   logoutBtn: {
     borderColor: colors.secondaryDark,
+    marginTop: spacing.sm,
   },
 });

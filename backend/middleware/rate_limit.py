@@ -2,8 +2,8 @@
 Rate limiting middleware for Aarini backend.
 
 Uses flask-limiter with in-memory storage. Limits are per-IP for
-unauthenticated endpoints and per-user (via X-User-Id header or
-request.user_id) for authenticated endpoints.
+unauthenticated endpoints and per-user (via request.user_id) for 
+authenticated endpoints.
 
 In test mode (FLASK_ENV=testing or TESTING=True), all limits are
 disabled so that test suites run without interference.
@@ -18,15 +18,14 @@ from flask_limiter.util import get_remote_address
 def _get_key():
     """
     Key function for rate limiting.
-    Uses X-User-Id header (set by authenticated_user decorator in mock mode)
-    or falls back to remote IP address.
+    Securely relies on server-verified JWT context or falls back to remote IP address.
+    Eliminated the vulnerable client-spoofable X-User-Id header check.
     """
     user_id = getattr(request, "user_id", None)
     if user_id:
         return f"user:{user_id}"
-    header_id = request.headers.get("X-User-Id")
-    if header_id:
-        return f"user:{header_id}"
+    
+    # Secure fallback to remote IP address for unauthenticated clients
     return f"ip:{get_remote_address()}"
 
 

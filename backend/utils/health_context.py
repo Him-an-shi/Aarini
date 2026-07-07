@@ -7,11 +7,21 @@ it as a structured context string for injection into the Gemini system prompt.
 
 import time
 import logging
+import threading
 
 logger = logging.getLogger(__name__)
 
 _context_cache = {}
+_cache_lock = threading.Lock()
 CACHE_TTL_SECONDS = 300
+MAX_CACHE_SIZE = 1000
+
+
+def _cleanup_cache():
+    """Enforce MAX_CACHE_SIZE to prevent memory leaks."""
+    while len(_context_cache) >= MAX_CACHE_SIZE:
+        # Pop the oldest item (first in insertion order)
+        _context_cache.pop(next(iter(_context_cache)), None)
 
 
 def build_health_context(uid, db=None, firebase_initialized=False):
@@ -21,9 +31,13 @@ def build_health_context(uid, db=None, firebase_initialized=False):
     Returns a string summarizing the user's current cycle phase, recent symptoms,
     and mood entries. Returns empty string if no data is available.
     """
-    cached = _context_cache.get(uid)
-    if cached and (time.time() - cached["ts"]) < CACHE_TTL_SECONDS:
-        return cached["context"]
+    with _cache_lock:
+        cached = _context_cache.get(uid)
+        if cached and (time.time() - cached["ts"]) < CACHE_TTL_SECONDS:
+            # Re-insert to maintain LRU order
+            _context_cache.pop(uid, None)
+            _context_cache[uid] = cached
+            return cached["context"]
 
     context_parts = []
 
@@ -40,7 +54,13 @@ def build_health_context(uid, db=None, firebase_initialized=False):
 
     context = "\n".join(part for part in context_parts if part)
 
-    _context_cache[uid] = {"context": context, "ts": time.time()}
+    with _cache_lock:
+        _cleanup_cache()
+        
+        # Remove existing key if present so it moves to the end (maintaining LRU-ish order)
+        _context_cache.pop(uid, None)
+        _context_cache[uid] = {"context": context, "ts": time.time()}
+        
     return context
 
 
@@ -147,7 +167,8 @@ def _build_mock_context():
 
 def invalidate_cache(uid=None):
     """Clear cached context for a user, or all users if uid is None."""
-    if uid:
-        _context_cache.pop(uid, None)
-    else:
-        _context_cache.clear()
+    with _cache_lock:
+        if uid:
+            _context_cache.pop(uid, None)
+        else:
+            _context_cache.clear()

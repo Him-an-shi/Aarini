@@ -55,7 +55,26 @@ class TestAddSymptom:
         resp = client.post("/add-symptom", headers=json_headers, json=payload)
 
         assert resp.status_code == 201
+def test_add_symptom_malformed_date(self, client, json_headers):
+        """Malformed date format (not YYYY-MM-DD) returns 400."""
+        payload = {"type": "Cramps", "severity": "High", "date": "06-15-2026"}
+        resp = client.post("/add-symptom", headers=json_headers, json=payload)
 
+        assert resp.status_code == 400
+
+    def test_add_symptom_future_date(self, client, json_headers):
+        """Future dates return 400."""
+        payload = {"type": "Cramps", "severity": "High", "date": "2999-12-31"}
+        resp = client.post("/add-symptom", headers=json_headers, json=payload)
+
+        assert resp.status_code == 400
+
+    def test_add_symptom_invalid_severity(self, client, json_headers):
+        """Invalid severity (not Low/Medium/High) returns 400."""
+        payload = {"type": "Cramps", "severity": "Extreme", "date": "2026-06-15"}
+        resp = client.post("/add-symptom", headers=json_headers, json=payload)
+
+        assert resp.status_code == 400
 
 class TestGetSymptoms:
     """GET /symptoms endpoint tests."""

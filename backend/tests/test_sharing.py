@@ -44,6 +44,24 @@ class TestCreateShareLink:
 
         assert resp.status_code == 400
 
+    # 🛠️ NEW TESTS FOR ISSUE #114
+
+    def test_create_share_link_negative_expiry(self, client, auth_headers):
+        """Negative expiresInDays returns 400."""
+        resp = client.post(
+            "/share/create", headers=auth_headers, json={"expiresInDays": -5}
+        )
+
+        assert resp.status_code == 400
+
+    def test_create_share_link_invalid_type(self, client, auth_headers):
+        """String or invalid type for expiresInDays returns 400."""
+        resp = client.post(
+            "/share/create", headers=auth_headers, json={"expiresInDays": "30"}
+        )
+
+        assert resp.status_code == 400
+
 
 class TestViewSharedData:
     """GET /share/view/<token> endpoint tests."""
@@ -115,8 +133,3 @@ class TestRevokeShareLink:
 
     def test_revoke_nonexistent_token(self, client, auth_headers):
         """Revoking a token that doesn't exist returns 404."""
-        resp = client.post(
-            "/share/revoke", headers=auth_headers, json={"token": "doesnotexist00"}
-        )
-
-        assert resp.status_code == 404

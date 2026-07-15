@@ -5,13 +5,15 @@ Fetches the user's recent health data (cycles, symptoms, moods) and formats
 it as a structured context string for injection into the Gemini system prompt.
 """
 
-import time
 import logging
+from cachetools import TTLCache
 
 logger = logging.getLogger(__name__)
 
-_context_cache = {}
 CACHE_TTL_SECONDS = 300
+# 🛠️ FIX: Replaced unbounded dict with a TTLCache (max 1000 users, 5-minute TTL).
+# This prevents the memory leak from dead sessions accumulating forever.
+_context_cache = TTLCache(maxsize=1000, ttl=CACHE_TTL_SECONDS)
 
 
 def build_health_context(uid, db=None, firebase_initialized=False):
@@ -21,9 +23,10 @@ def build_health_context(uid, db=None, firebase_initialized=False):
     Returns a string summarizing the user's current cycle phase, recent symptoms,
     and mood entries. Returns empty string if no data is available.
     """
+    # 🛠️ FIX: TTLCache handles the expiration automatically!
     cached = _context_cache.get(uid)
-    if cached and (time.time() - cached["ts"]) < CACHE_TTL_SECONDS:
-        return cached["context"]
+    if cached:
+        return cached
 
     context_parts = []
 
@@ -40,7 +43,8 @@ def build_health_context(uid, db=None, firebase_initialized=False):
 
     context = "\n".join(part for part in context_parts if part)
 
-    _context_cache[uid] = {"context": context, "ts": time.time()}
+    # 🛠️ FIX: We can just store the string directly now.
+    _context_cache[uid] = context
     return context
 
 

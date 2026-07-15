@@ -560,17 +560,27 @@ def add_symptom():
     uid = request.user_id
     symptom_type = data.get("type")
     severity = data.get("severity")  # e.g., Low, Medium, High
-    date = data.get("date")
+    symptom_date = data.get("date")
 
-    if not symptom_type or not severity or not date:
+    if not symptom_type or not severity or not symptom_date:
         return jsonify({"error": "Missing required fields (type, severity, date)"}), 400
+
+    if severity not in ["Low", "Medium", "High"]:
+        return jsonify({"error": "Severity must be 'Low', 'Medium', or 'High'"}), 400
+
+    try:
+        parsed_date = parse_date(symptom_date)
+        if parsed_date > date.today():
+            return jsonify({"error": "Symptom date cannot be in the future"}), 400
+    except ValueError:
+        return jsonify({"error": "Invalid date format. Must be YYYY-MM-DD"}), 400
 
     logger.info(f"Logging symptom: {symptom_type} for user: {uid}")
 
     if not firebase_initialized:
         return jsonify({
             "message": "Symptom tracked successfully (Mock Mode)",
-            "symptom": {"type": symptom_type, "severity": severity, "date": date}
+            "symptom": {"type": symptom_type, "severity": severity, "date": symptom_date}
         }), 201
 
     try:
@@ -578,13 +588,14 @@ def add_symptom():
         symptom_ref.set({
             "type": symptom_type,
             "severity": severity,
-            "date": date,
+            "date": symptom_date,
             "loggedAt": firestore.SERVER_TIMESTAMP
         })
         return jsonify({"message": "Symptom logged", "id": symptom_ref.id}), 201
     except Exception as e:
         logger.error(f"Error logging symptom: {str(e)}")
         return jsonify({"error": str(e)}), 500
+
 
 @app.route("/symptoms", methods=["GET"])
 @authenticated_user
@@ -615,7 +626,6 @@ def get_symptoms():
 
 mock_symptoms = {}
 
-
 @app.route("/symptoms/<symptom_id>", methods=["PUT"])
 @authenticated_user
 @validate_request({
@@ -632,6 +642,16 @@ def update_symptom(symptom_id):
     symptom_date = data.get("date")
 
     logger.info(f"Updating symptom {symptom_id} for user: {uid}")
+
+    if severity not in ["Low", "Medium", "High"]:
+        return jsonify({"error": "Severity must be 'Low', 'Medium', or 'High'"}), 400
+
+    try:
+        parsed_date = parse_date(symptom_date)
+        if parsed_date > date.today():
+            return jsonify({"error": "Symptom date cannot be in the future"}), 400
+    except ValueError:
+        return jsonify({"error": "Invalid date format. Must be YYYY-MM-DD"}), 400
 
     if not firebase_initialized:
         user_symptoms = mock_symptoms.get(uid, [])
@@ -687,8 +707,6 @@ def delete_symptom(symptom_id):
     except Exception as e:
         logger.error(f"Error deleting symptom: {str(e)}")
         return jsonify({"error": str(e)}), 500
-
-
 # ----------------- AI HEALTH CHAT ENDPOINTS -----------------
 
 @app.route("/chat", methods=["POST"])

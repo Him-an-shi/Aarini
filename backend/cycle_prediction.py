@@ -1,31 +1,3 @@
-from datetime import date, datetime, timedelta
-from statistics import median
-import math
-
-
-DEFAULT_CYCLE_LENGTH = 28
-DEFAULT_PERIOD_LENGTH = 5
-MIN_CYCLE_LENGTH = 15
-MAX_CYCLE_LENGTH = 60
-MIN_PERIOD_LENGTH = 1
-MAX_PERIOD_LENGTH = 14
-
-
-def parse_date(value):
-    if isinstance(value, date):
-        return value
-    if not isinstance(value, str):
-        raise ValueError("Date must use YYYY-MM-DD format")
-    try:
-        return datetime.strptime(value, "%Y-%m-%d").date()
-    except ValueError as exc:
-        raise ValueError("Date must use YYYY-MM-DD format") from exc
-
-
-def _clamp(value, lower, upper):
-    return max(lower, min(upper, value))
-
-
 def normalize_cycles(cycles):
     if not cycles:
         return []
@@ -43,129 +15,29 @@ def normalize_cycles(cycles):
         
     sorted_cycles = sorted(normalized, key=lambda cycle: cycle["start"])
     
-    # Filter out overlapping cycles
+    # 🛠️ FIX: Robust overlap detection and merging
     valid_cycles = []
     for cycle in sorted_cycles:
-        if valid_cycles and valid_cycles[-1]["end"] and cycle["start"] <= valid_cycles[-1]["end"]:
+        if not valid_cycles:
+            valid_cycles.append(cycle)
             continue
+            
+        prev = valid_cycles[-1]
+        
+        # Check 1: Does it start on or before the previous cycle actually ended?
+        overlaps_end_date = prev["end"] and cycle["start"] <= prev["end"]
+        
+        # Check 2: Does it start impossibly soon after the previous cycle began?
+        # (It is biologically impossible to start a new cycle within MIN_CYCLE_LENGTH)
+        overlaps_start_date = (cycle["start"] - prev["start"]).days < MIN_CYCLE_LENGTH
+        
+        if overlaps_end_date or overlaps_start_date:
+            # If they overlap, gracefully merge the end dates so we don't lose data
+            if cycle["end"]:
+                if not prev["end"] or cycle["end"] > prev["end"]:
+                    prev["end"] = cycle["end"]
+            continue
+            
         valid_cycles.append(cycle)
         
     return valid_cycles
-
-
-def _weighted_average(values):
-    if not values:
-        return None
-    recent = values[-6:]
-    weights = list(range(1, len(recent) + 1))
-    return round(sum(value * weight for value, weight in zip(recent, weights)) / sum(weights))
-
-
-def _std_deviation(values):
-    if len(values) < 2:
-        return 0.0
-    mean = sum(values) / len(values)
-    variance = sum((v - mean) ** 2 for v in values) / (len(values) - 1)
-    return math.sqrt(variance)
-
-
-def _detect_irregularity(values, threshold=7):
-    if len(values) < 3:
-        return None
-    mean = sum(values) / len(values)
-    latest = values[-1]
-    deviation = abs(latest - mean)
-    if deviation > threshold:
-        direction = "longer" if latest > mean else "shorter"
-        return f"Your most recent cycle was {int(deviation)} days {direction} than your average. Consider tracking this with your healthcare provider if the pattern continues."
-    return None
-
-
-def predict_cycle(cycles, today=None, fallback_cycle_length=DEFAULT_CYCLE_LENGTH):
-    today = parse_date(today or date.today())
-    normalized = normalize_cycles(cycles)
-    fallback = _clamp(int(fallback_cycle_length or DEFAULT_CYCLE_LENGTH), MIN_CYCLE_LENGTH, MAX_CYCLE_LENGTH)
-
-    if not normalized:
-        return {
-            "hasHistory": False,
-            "averageCycleLength": fallback,
-            "averagePeriodLength": DEFAULT_PERIOD_LENGTH,
-            "currentPhase": None,
-            "cycleDay": None,
-            "nextPeriodStart": None,
-            "nextPeriodEnd": None,
-            "ovulationDate": None,
-            "ovulationWindowStart": None,
-            "ovulationWindowEnd": None,
-            "confidence": "low",
-        }
-
-    intervals = [
-        (normalized[index]["start"] - normalized[index - 1]["start"]).days
-        for index in range(1, len(normalized))
-    ]
-    valid_intervals = [
-        value for value in intervals if MIN_CYCLE_LENGTH <= value <= MAX_CYCLE_LENGTH
-    ]
-    average_cycle = _weighted_average(valid_intervals) or fallback
-
-    period_lengths = [
-        (cycle["end"] - cycle["start"]).days + 1
-        for cycle in normalized
-        if cycle["end"]
-    ]
-    valid_period_lengths = [
-        value for value in period_lengths if MIN_PERIOD_LENGTH <= value <= MAX_PERIOD_LENGTH
-    ]
-    average_period = round(median(valid_period_lengths)) if valid_period_lengths else DEFAULT_PERIOD_LENGTH
-
-    latest_start = normalized[-1]["start"]
-    next_period = latest_start + timedelta(days=average_cycle)
-    while next_period <= today:
-        next_period += timedelta(days=average_cycle)
-
-    active_cycle_start = next_period - timedelta(days=average_cycle)
-    cycle_day = (today - active_cycle_start).days + 1
-    ovulation_day_number = max(average_period + 2, average_cycle - 14)
-    ovulation_date = active_cycle_start + timedelta(days=ovulation_day_number - 1)
-    window_start = ovulation_date - timedelta(days=5)
-    window_end = ovulation_date + timedelta(days=1)
-
-    if cycle_day <= average_period:
-        current_phase = "Menstrual"
-    elif today < window_start:
-        current_phase = "Follicular"
-    elif today <= window_end:
-        current_phase = "Ovulation"
-    else:
-        current_phase = "Luteal"
-
-    confidence = "high" if len(valid_intervals) >= 3 else "medium" if valid_intervals else "low"
-
-    std_dev = _std_deviation(valid_intervals) if len(valid_intervals) >= 2 else 0
-    margin_days = max(1, round(std_dev))
-    confidence_earliest = (next_period - timedelta(days=margin_days)).isoformat()
-    confidence_latest = (next_period + timedelta(days=margin_days)).isoformat()
-    irregularity_note = _detect_irregularity(valid_intervals)
-
-    return {
-        "hasHistory": True,
-        "averageCycleLength": average_cycle,
-        "averagePeriodLength": average_period,
-        "currentPhase": current_phase,
-        "cycleDay": cycle_day,
-        "currentCycleStart": active_cycle_start.isoformat(),
-        "nextPeriodStart": next_period.isoformat(),
-        "nextPeriodEnd": (next_period + timedelta(days=average_period - 1)).isoformat(),
-        "confidenceWindow": {
-            "earliest": confidence_earliest,
-            "latest": confidence_latest,
-            "marginDays": margin_days,
-        },
-        "ovulationDate": ovulation_date.isoformat(),
-        "ovulationWindowStart": window_start.isoformat(),
-        "ovulationWindowEnd": window_end.isoformat(),
-        "confidence": confidence,
-        "irregularityNote": irregularity_note,
-    }

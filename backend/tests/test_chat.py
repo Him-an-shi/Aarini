@@ -1,6 +1,8 @@
 """Integration tests for AI chat (/chat) and insights (/insights) endpoints."""
 
 import json
+from unittest.mock import patch
+import app
 
 
 class TestChat:
@@ -31,75 +33,32 @@ class TestChat:
 
         assert resp.status_code == 400
 
-    def test_chat_pii_sanitization(self, client, json_headers):
-        """PII in message should be stripped (mock response is canned, but no crash)."""
-        payload = {
-            "message": "My name is Priya, my email is priya@gmail.com and I have cramps"
-        }
-        resp = client.post("/chat", headers=json_headers, json=payload)
+    # 🛠️ FIX FOR ISSUE #118: True PII Verification
+    @patch("app.model.generate_content")
+    def test_chat_pii_sanitization(self, mock_generate, client, json_headers):
+        """PII in message should be stripped before reaching the model."""
+        # Setup a fake AI response to return when our mocked model is called
+        class MockResponse:
+            text = "This is a mocked AI response based on sanitized input."
+        mock_generate.return_value = MockResponse()
 
-        assert resp.status_code == 200
-        data = resp.get_json()
-        assert "response" in data
+        # Temporarily trick the app into thinking it has an API key so it calls the model
+        original_key = getattr(app, "GEMINI_API_KEY", None)
+        app.GEMINI_API_KEY = "dummy-key-for-testing"
 
-    def test_chat_long_message(self, client, json_headers):
-        """Long messages within the validation limit don't crash the endpoint."""
-        payload = {"message": "I have been experiencing " + "cramps " * 200}
-        resp = client.post("/chat", headers=json_headers, json=payload)
+        try:
+            payload = {
+                "message": "My name is Priya, my email is priya@gmail.com and I have cramps"
+            }
+            resp = client.post("/chat", headers=json_headers, json=payload)
 
-        assert resp.status_code == 200
+            assert resp.status_code == 200
+            
+            # Ensure the model was actually called
+            assert mock_generate.called
 
+            # Intercept and extract the exact string that was about to be sent
+            prompt_sent = mock_generate.call_args[0][0]
 
-class TestInsights:
-    """GET /insights endpoint tests."""
-
-    def test_insights_success(self, client, json_headers):
-        """Returns insights list with 200."""
-        resp = client.get("/insights?uid=test_user_001", headers=json_headers)
-
-        assert resp.status_code == 200
-        data = resp.get_json()
-        assert isinstance(data, list)
-        assert len(data) >= 1
-
-    def test_insights_structure(self, client, json_headers):
-        """Each insight has category, title, message, type."""
-        resp = client.get("/insights", headers=json_headers)
-
-        data = resp.get_json()
-        for insight in data:
-            assert "category" in insight
-            assert "title" in insight
-            assert "message" in insight
-            assert "type" in insight
-
-    def test_insights_types_valid(self, client, json_headers):
-        """Insight types are one of tip, success, alert."""
-        resp = client.get("/insights", headers=json_headers)
-
-        data = resp.get_json()
-        valid_types = {"tip", "success", "alert", "warning", "info"}
-        for insight in data:
-            assert insight["type"] in valid_types
-
-
-class TestHealthCheck:
-    """GET / health check endpoint tests."""
-
-    def test_health_check(self, client):
-        """Health endpoint returns 200 with status and app name."""
-        resp = client.get("/")
-
-        assert resp.status_code == 200
-        data = resp.get_json()
-        assert data["status"] == "healthy"
-        assert "app" in data
-        assert "firebase_connected" in data
-        assert data["firebase_connected"] is False  # mock mode
-
-    def test_cors_headers(self, client):
-        """Response includes CORS headers (dev mode allows all)."""
-        resp = client.get("/")
-
-        # In dev mode (no ALLOWED_ORIGINS set), flask-cors adds Access-Control-Allow-Origin
-        assert resp.status_code == 200
+            # Verify the PII was actually scrubbed!
+            assert

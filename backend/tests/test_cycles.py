@@ -73,6 +73,26 @@ class TestAddCycle:
         data = resp.get_json()
         assert "prediction" in data
 
+    # 🛠️ NEW TESTS FOR ISSUE #116
+    def test_add_cycle_future_date(self, client, auth_headers):
+        """Future startDate returns 400."""
+        payload = {
+            "startDate": "2099-01-01", 
+            "endDate": "2099-01-05"
+        }
+        resp = client.post("/add-cycle", headers=auth_headers, json=payload)
+        assert resp.status_code == 400
+
+    def test_add_cycle_invalid_flow_intensity(self, client, auth_headers):
+        """Invalid flowIntensity enum returns 400."""
+        payload = {
+            "startDate": "2026-06-01",
+            "endDate": "2026-06-05",
+            "flowIntensity": "Super Heavy"
+        }
+        resp = client.post("/add-cycle", headers=auth_headers, json=payload)
+        assert resp.status_code == 400
+
 
 class TestGetCycles:
     """GET /cycles endpoint tests."""

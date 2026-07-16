@@ -55,7 +55,6 @@ class TestAddSymptom:
         resp = client.post("/add-symptom", headers=json_headers, json=payload)
 
         assert resp.status_code == 201
-#added by shikha shukla  issue 165 
     def test_add_symptom_future_date(self, client, json_headers):
         """Future symptom date returns 400."""
         payload = {
@@ -80,8 +79,7 @@ class TestAddSymptom:
 
         resp = client.post("/add-symptom", headers=json_headers, json=payload)
 
-        assert resp.status_code == 400
-# issue 165 if fixed now 
+        assert resp.status_code == 400 
 
 class TestGetSymptoms:
     """GET /symptoms endpoint tests."""

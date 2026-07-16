@@ -583,8 +583,7 @@ def add_symptom():
     """
     data = request.get_json() or {}
     uid = request.user_id
-    symptom_type = data.get("type")
-    #change from here 
+    symptom_type = data.get("type") 
     severity = data.get("severity")
     symptom_date = data.get("date")
 
@@ -601,8 +600,7 @@ def add_symptom():
             return jsonify({"error": "Symptom date cannot be in the future"}), 400
     
     except ValueError:
-        return jsonify({"error": "Invalid date format"}), 400
-     # change is till here 
+        return jsonify({"error": "Invalid date format"}), 400 
 
     logger.info(f"Logging symptom: {symptom_type} for user: {uid}")
 

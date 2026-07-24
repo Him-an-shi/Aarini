@@ -924,7 +924,6 @@ def get_insights():
 
 
 # ----------------- ACCOUNT MANAGEMENT ENDPOINTS -----------------
-
 @app.route("/delete-account", methods=["DELETE"])
 @limiter.limit(RATE_LIMITS["delete_account"])
 @authenticated_user
@@ -945,6 +944,7 @@ def delete_account():
 
     if not firebase_initialized:
         mock_cycles.pop(uid, None)
+        mock_symptoms.pop(uid, None) # 🛠️ FIX 3: Clear mock symptoms from RAM
         return jsonify({
             "message": "Account and all health data permanently deleted (Mock Mode)",
             "deletedCollections": ["cycles", "symptoms", "moods", "profile"]
@@ -953,26 +953,33 @@ def delete_account():
     try:
         user_doc = db.collection("users").document(uid)
 
+        # 1. Delete all subcollections
         subcollections = ["cycles", "symptoms", "moods"]
         for coll_name in subcollections:
             docs = user_doc.collection(coll_name).stream()
             for doc in docs:
                 doc.reference.delete()
+                
+        # 🛠️ FIX 1: Find and delete any orphaned share links tied to this UID
+        links_query = db.collection("share_links").where("uid", "==", uid).stream()
+        for link_doc in links_query:
+            link_doc.reference.delete()
 
+        # 2. Delete the main user document
         user_doc.delete()
 
+        # 3. Delete the Firebase Auth user
         auth.delete_user(uid)
 
         logger.info(f"Account permanently deleted: {uid}")
         return jsonify({
             "message": "Account and all health data permanently deleted",
-            "deletedCollections": subcollections + ["profile"]
+            "deletedCollections": subcollections + ["share_links", "profile"]
         }), 200
 
     except Exception as e:
         logger.error(f"Account deletion error: {str(e)}")
         return jsonify({"error": f"Failed to delete account: {str(e)}"}), 500
-
 
 # ----------------- PROFILE MANAGEMENT ENDPOINTS -----------------
 

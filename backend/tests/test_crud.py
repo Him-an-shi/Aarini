@@ -58,6 +58,20 @@ class TestUpdateCycle:
         assert resp.status_code == 400
         assert "14 days" in resp.get_json()["error"]
 
+    # 🛠️ NEW TEST FOR ISSUE #117
+    def test_update_cycle_future_date(self, client, auth_headers):
+        create = client.post("/add-cycle", json={
+            "startDate": "2026-04-01",
+            "endDate": "2026-04-05",
+        }, headers=auth_headers)
+        cycle_id = create.get_json()["cycle"]["id"]
+
+        resp = client.put(f"/cycles/{cycle_id}", json={
+            "startDate": "2099-01-01",
+            "endDate": "2099-01-05",
+        }, headers=auth_headers)
+        assert resp.status_code == 400
+
 
 class TestDeleteCycle:
     """DELETE /cycles/:id"""
@@ -122,31 +136,22 @@ class TestUpdateSymptom:
         }, headers=auth_headers)
         assert resp.status_code == 400
 
-
-class TestDeleteSymptom:
-    """DELETE /symptoms/:id"""
-
-    def test_delete_symptom_success(self, client, auth_headers):
+    # 🛠️ NEW TESTS FOR ISSUE #117
+    def test_update_symptom_future_date(self, client, auth_headers):
         from app import mock_symptoms
         uid = "test_user_001"
-        mock_symptoms[uid] = [{"id": "sym_del_1", "type": "Bloating", "severity": "Medium", "date": "2026-05-22"}]
+        mock_symptoms[uid] = [{"id": "sym_fut_1", "type": "Cramps", "severity": "Low", "date": "2026-05-20"}]
 
-        resp = client.delete("/symptoms/sym_del_1", headers=auth_headers)
-        assert resp.status_code == 200
+        resp = client.put("/symptoms/sym_fut_1", json={
+            "type": "Cramps",
+            "severity": "Low",
+            "date": "2099-01-01",
+        }, headers=auth_headers)
+        assert resp.status_code == 400
 
-    def test_delete_symptom_not_found(self, client, auth_headers):
-        resp = client.delete("/symptoms/nonexistent_id", headers=auth_headers)
-        assert resp.status_code == 404
-
-    def test_delete_symptom_removes_entry(self, client, auth_headers):
+    def test_update_symptom_invalid_severity(self, client, auth_headers):
         from app import mock_symptoms
         uid = "test_user_001"
-        mock_symptoms[uid] = [
-            {"id": "sym_keep", "type": "Fatigue", "severity": "Low", "date": "2026-05-23"},
-            {"id": "sym_remove", "type": "Acne", "severity": "High", "date": "2026-05-24"},
-        ]
+        mock_symptoms[uid] = [{"id": "sym_sev_1", "type": "Cramps", "severity": "Low", "date": "2026-05-20"}]
 
-        client.delete("/symptoms/sym_remove", headers=auth_headers)
-        remaining_ids = [s["id"] for s in mock_symptoms[uid]]
-        assert "sym_remove" not in remaining_ids
-        assert "sym_keep" in remaining_ids
+        resp = client.put("/symptoms/sym

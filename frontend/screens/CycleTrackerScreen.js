@@ -43,6 +43,7 @@ export const CycleTrackerScreen = () => {
   const { t } = useLanguage();
   const { isOnline } = useNetwork();
   const navigation = useNavigation();
+  const [expandedCycleId, setExpandedCycleId] = useState(null);
   const { colors, typography, spacing } = theme;
   const styles = useMemo(() => createStyles(theme), [theme]);
   const storageKey = `cycles:${user?.uid || 'local'}`;
@@ -296,6 +297,43 @@ export const CycleTrackerScreen = () => {
           </View>
         </View>
 
+        {cycles.length > 0 && (
+          <>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitle}>
+                <Droplets size={20} color={colors.primaryDark} />
+                <Text style={typography.h2}>Cycle History</Text>
+              </View>
+            </View>
+            {cycles.slice(0, 6).map((c) => (
+              <TouchableOpacity
+                key={c.id}
+                style={styles.cycleRow}
+                onPress={() => navigation.navigate('CycleDetail', { cycle: c })}
+                onLongPress={() => {
+                  setExpandedCycleId(expandedCycleId === c.id ? null : c.id);
+                }}
+              >
+                <View style={styles.cycleRowInfo}>
+                  <Text style={styles.cycleRowDates}>{c.startDate} — {c.endDate}</Text>
+                  <Text style={styles.cycleRowMeta}>
+                    {(Math.ceil((new Date(c.endDate) - new Date(c.startDate)) / 86400000)) + 1}d
+                    {c.flowIntensity ? ` · ${c.flowIntensity}` : ''}
+                  </Text>
+                </View>
+                {expandedCycleId === c.id && (
+                  <TouchableOpacity
+                    style={styles.cycleRowAction}
+                    onPress={() => navigation.navigate('CycleDetail', { cycle: c })}
+                  >
+                    <Text style={styles.cycleRowActionText}>Edit</Text>
+                  </TouchableOpacity>
+                )}
+              </TouchableOpacity>
+            ))}
+          </>
+        )}
+
         <View style={styles.notificationCard}>
           <View style={styles.bell} importantForAccessibility="no"><Bell size={19} color={colors.primaryDark} /></View>
           <View style={styles.flex}>
@@ -388,6 +426,12 @@ const createStyles = ({ colors, typography, spacing, borderRadius, shadows }) =>
   loggedLegend: { ...typography.caption, color: colors.primaryDark },
   predictedLegend: { ...typography.caption, color: colors.secondaryDark },
   ovulationLegend: { ...typography.caption, color: colors.accentDark },
+  cycleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.cardBackground, borderRadius: borderRadius.md, padding: spacing.md, marginBottom: spacing.sm, ...shadows.light },
+  cycleRowInfo: { flex: 1 },
+  cycleRowDates: { ...typography.bodyMedium, color: colors.textDark, fontWeight: '600' },
+  cycleRowMeta: { ...typography.caption, color: colors.textLight, marginTop: 2 },
+  cycleRowAction: { padding: spacing.sm, backgroundColor: colors.primary, borderRadius: borderRadius.sm },
+  cycleRowActionText: { ...typography.caption, color: colors.primaryDark, fontWeight: '800' },
   notificationCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.cardBackground, borderRadius: borderRadius.md, padding: spacing.md },
   bell: { width: 38, height: 38, borderRadius: 19, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
   notificationTitle: { ...typography.bodyMedium, color: colors.textDark, fontWeight: '800', marginBottom: 2 },

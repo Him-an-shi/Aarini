@@ -3,7 +3,7 @@ import logging
 import secrets
 import time
 import json
-from datetime import date
+from datetime import datetime, date
 from functools import wraps
 from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
@@ -583,20 +583,35 @@ def add_symptom():
     """
     data = request.get_json() or {}
     uid = request.user_id
-    symptom_type = data.get("type")
-    severity = data.get("severity")  # e.g., Low, Medium, High
-    date = data.get("date")
+    symptom_type = data.get("type") 
+    severity = data.get("severity")
+    symptom_date = data.get("date")
 
-    if not symptom_type or not severity or not date:
+    if not symptom_type or not severity or not symptom_date:
         return jsonify({"error": "Missing required fields (type, severity, date)"}), 400
+    # Validate severity
+    allowed_severities = ["Low", "Medium", "High"]
+    if severity not in allowed_severities:
+        return jsonify({"error": "Invalid severity. Allowed values: Low, Medium, High"}), 400
+    # Validate future date
+    try:
+        parsed_date = datetime.strptime(symptom_date, "%Y-%m-%d").date()
+        if parsed_date > date.today():
+            return jsonify({"error": "Symptom date cannot be in the future"}), 400
+    
+    except ValueError:
+        return jsonify({"error": "Invalid date format"}), 400 
 
     logger.info(f"Logging symptom: {symptom_type} for user: {uid}")
 
     if not firebase_initialized:
         return jsonify({
-            "message": "Symptom tracked successfully (Mock Mode)",
-            "symptom": {"type": symptom_type, "severity": severity, "date": date}
-        }), 201
+           "message": "Symptom tracked successfully (Mock Mode)",
+           "symptom": {
+            "type": symptom_type,
+            "severity": severity,
+            "date": symptom_date
+        }}), 201
 
     try:
         symptom_ref = db.collection("users").document(uid).collection("symptoms").document()

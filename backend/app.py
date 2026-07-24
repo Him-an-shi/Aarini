@@ -3,7 +3,7 @@ import logging
 import secrets
 import time
 import json
-from datetime import date
+from datetime import datetime, date
 from functools import wraps
 from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
@@ -441,6 +441,31 @@ def get_cycles():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route("/cycles/<cycle_id>", methods=["GET"])
+@authenticated_user
+def get_cycle(cycle_id):
+    """Retrieve a single cycle entry by its ID."""
+    uid = request.user_id
+
+    if not firebase_initialized:
+        user_cycles = mock_cycles.get(uid, [])
+        cycle = next((c for c in user_cycles if c.get("id") == cycle_id), None)
+        if not cycle:
+            return jsonify({"error": "Cycle not found"}), 404
+        return jsonify({"cycle": cycle}), 200
+
+    try:
+        doc = db.collection("users").document(uid).collection("cycles").document(cycle_id).get()
+        if not doc.exists:
+            return jsonify({"error": "Cycle not found"}), 404
+        cycle = doc.to_dict()
+        cycle["id"] = doc.id
+        return jsonify({"cycle": cycle}), 200
+    except Exception as e:
+        logger.error(f"Error fetching cycle {cycle_id}: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/cycle-prediction", methods=["GET"])
 @authenticated_user
 def get_cycle_prediction():
@@ -541,7 +566,134 @@ def delete_cycle(cycle_id):
         return jsonify({"error": str(e)}), 500
 
 
+# ----------------- CYCLE UPDATE/DELETE ENDPOINTS -----------------
+
+@app.route("/cycles/<cycle_id>", methods=["PUT"])
+@authenticated_user
+@validate_request({
+    "startDate": {"type": "date", "required": True},
+    "endDate": {"type": "date", "required": True},
+})
+def update_cycle(cycle_id):
+    """
+    Update an existing cycle entry.
+    Expected Payload: { startDate, endDate, flowIntensity?, symptoms?, mood? }
+    """
+    data = request.get_json() or {}
+    uid = request.user_id
+    start_date = data.get("startDate")
+    end_date = data.get("endDate")
+    flow_intensity = data.get("flowIntensity")
+    symptoms = data.get("symptoms", [])
+    mood = data.get("mood")
+
+    try:
+        parsed_start = parse_date(start_date)
+        parsed_end = parse_date(end_date)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    if parsed_end < parsed_start:
+        return jsonify({"error": "endDate cannot be before startDate"}), 400
+    if (parsed_end - parsed_start).days > 13:
+        return jsonify({"error": "A period entry cannot be longer than 14 days"}), 400
+    if parsed_start > date.today():
+        return jsonify({"error": "startDate cannot be in the future"}), 400
+
+    logger.info(f"Updating cycle {cycle_id} for user: {uid}")
+
+    if not firebase_initialized:
+        user_cycles = mock_cycles.get(uid, [])
+        target = next((c for c in user_cycles if c.get("id") == cycle_id), None)
+        if not target:
+            return jsonify({"error": "Cycle entry not found"}), 404
+        target["startDate"] = start_date
+        target["endDate"] = end_date
+        if flow_intensity is not None:
+            target["flowIntensity"] = flow_intensity
+        if symptoms:
+            target["symptoms"] = symptoms
+        if mood is not None:
+            target["mood"] = mood
+        invalidate_cache(uid)
+        return jsonify({
+            "message": "Cycle updated successfully (Mock Mode)",
+            "cycle": target,
+            "prediction": predict_cycle(user_cycles),
+        }), 200
+
+    try:
+        cycle_ref = db.collection("users").document(uid).collection("cycles").document(cycle_id)
+        doc = cycle_ref.get()
+        if not doc.exists:
+            return jsonify({"error": "Cycle entry not found"}), 404
+        update_data = {
+            "startDate": start_date,
+            "endDate": end_date,
+        }
+        if flow_intensity is not None:
+            update_data["flowIntensity"] = flow_intensity
+        if symptoms:
+            update_data["symptoms"] = symptoms
+        if mood is not None:
+            update_data["mood"] = mood
+        cycle_ref.update(update_data)
+        invalidate_cache(uid)
+
+        cycles_ref = db.collection("users").document(uid).collection("cycles").order_by("startDate", direction=firestore.Query.DESCENDING)
+        cycles_list = [d.to_dict() | {"id": d.id} for d in cycles_ref.stream()]
+        profile = db.collection("users").document(uid).get().to_dict() or {}
+        return jsonify({
+            "message": "Cycle updated",
+            "cycle": {"id": cycle_id, **update_data},
+            "prediction": predict_cycle(cycles_list, fallback_cycle_length=profile.get("cycleLength", 28)),
+        }), 200
+    except Exception as e:
+        logger.error(f"Error updating cycle: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/cycles/<cycle_id>", methods=["DELETE"])
+@authenticated_user
+def delete_cycle(cycle_id):
+    """Permanently remove a cycle entry."""
+    uid = request.user_id
+    logger.info(f"Deleting cycle {cycle_id} for user: {uid}")
+
+    if not firebase_initialized:
+        user_cycles = mock_cycles.get(uid, [])
+        original_len = len(user_cycles)
+        mock_cycles[uid] = [c for c in user_cycles if c.get("id") != cycle_id]
+        if len(mock_cycles[uid]) == original_len:
+            return jsonify({"error": "Cycle entry not found"}), 404
+        invalidate_cache(uid)
+        return jsonify({
+            "message": "Cycle deleted successfully (Mock Mode)",
+            "prediction": predict_cycle(mock_cycles[uid]),
+        }), 200
+
+    try:
+        cycle_ref = db.collection("users").document(uid).collection("cycles").document(cycle_id)
+        doc = cycle_ref.get()
+        if not doc.exists:
+            return jsonify({"error": "Cycle entry not found"}), 404
+        cycle_ref.delete()
+        invalidate_cache(uid)
+
+        cycles_ref = db.collection("users").document(uid).collection("cycles").order_by("startDate", direction=firestore.Query.DESCENDING)
+        cycles_list = [d.to_dict() | {"id": d.id} for d in cycles_ref.stream()]
+        profile = db.collection("users").document(uid).get().to_dict() or {}
+        return jsonify({
+            "message": "Cycle deleted",
+            "prediction": predict_cycle(cycles_list, fallback_cycle_length=profile.get("cycleLength", 28)),
+        }), 200
+    except Exception as e:
+        logger.error(f"Error deleting cycle: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
 # ----------------- MOOD & SYMPTOM ENDPOINTS -----------------
+
+mock_moods = {}
 
 @app.route("/add-symptom", methods=["POST"])
 @limiter.limit(RATE_LIMITS["add_symptom"])
@@ -558,12 +710,24 @@ def add_symptom():
     """
     data = request.get_json() or {}
     uid = request.user_id
-    symptom_type = data.get("type")
-    severity = data.get("severity")  # e.g., Low, Medium, High
+    symptom_type = data.get("type") 
+    severity = data.get("severity")
     symptom_date = data.get("date")
 
     if not symptom_type or not severity or not symptom_date:
         return jsonify({"error": "Missing required fields (type, severity, date)"}), 400
+    # Validate severity
+    allowed_severities = ["Low", "Medium", "High"]
+    if severity not in allowed_severities:
+        return jsonify({"error": "Invalid severity. Allowed values: Low, Medium, High"}), 400
+    # Validate future date
+    try:
+        parsed_date = datetime.strptime(symptom_date, "%Y-%m-%d").date()
+        if parsed_date > date.today():
+            return jsonify({"error": "Symptom date cannot be in the future"}), 400
+    
+    except ValueError:
+        return jsonify({"error": "Invalid date format"}), 400 
 
     if severity not in ["Low", "Medium", "High"]:
         return jsonify({"error": "Severity must be 'Low', 'Medium', or 'High'"}), 400
@@ -579,9 +743,12 @@ def add_symptom():
 
     if not firebase_initialized:
         return jsonify({
-            "message": "Symptom tracked successfully (Mock Mode)",
-            "symptom": {"type": symptom_type, "severity": severity, "date": symptom_date}
-        }), 201
+           "message": "Symptom tracked successfully (Mock Mode)",
+           "symptom": {
+            "type": symptom_type,
+            "severity": severity,
+            "date": symptom_date
+        }}), 201
 
     try:
         symptom_ref = db.collection("users").document(uid).collection("symptoms").document()
@@ -707,6 +874,99 @@ def delete_symptom(symptom_id):
     except Exception as e:
         logger.error(f"Error deleting symptom: {str(e)}")
         return jsonify({"error": str(e)}), 500
+
+
+# ----------------- MOOD TRACKING ENDPOINTS -----------------
+
+@app.route("/add-mood", methods=["POST"])
+@limiter.limit(RATE_LIMITS["add_mood"])
+@authenticated_user
+@validate_request({
+    "mood": {"type": "string", "required": True},
+    "date": {"type": "date", "required": True},
+})
+def add_mood():
+    """
+    Logs a mood entry.
+    Expected Payload: { mood, date, notes? }
+    Mood values: e.g. "great", "good", "okay", "low", "bad"
+    """
+    data = request.get_json() or {}
+    uid = request.user_id
+    mood_value = data.get("mood")
+    mood_date = data.get("date")
+    notes = data.get("notes", "")
+
+    if not mood_value or not mood_date:
+        return jsonify({"error": "Missing required fields (mood, date)"}), 400
+
+    logger.info(f"Logging mood: {mood_value} for user: {uid}")
+
+    if not firebase_initialized:
+        mood_entry = {
+            "id": f"mock_mood_{len(mock_moods.get(uid, [])) + 1}",
+            "mood": mood_value,
+            "date": mood_date,
+            "notes": notes,
+        }
+        user_moods = mock_moods.setdefault(uid, [])
+        user_moods.append(mood_entry)
+        invalidate_cache(uid)
+        return jsonify({
+            "message": "Mood tracked successfully (Mock Mode)",
+            "mood": mood_entry,
+        }), 201
+
+    try:
+        mood_ref = db.collection("users").document(uid).collection("moods").document()
+        mood_ref.set({
+            "mood": mood_value,
+            "date": mood_date,
+            "notes": notes,
+            "loggedAt": firestore.SERVER_TIMESTAMP,
+        })
+        invalidate_cache(uid)
+        return jsonify({"message": "Mood logged", "id": mood_ref.id}), 201
+    except Exception as e:
+        logger.error(f"Error logging mood: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/moods", methods=["GET"])
+@authenticated_user
+def get_moods():
+    """Retrieve mood history for the authenticated user."""
+    uid = request.user_id
+    logger.info(f"Retrieving moods for user: {uid}")
+
+    if not firebase_initialized:
+        user_moods = mock_moods.get(uid, [
+            {"id": "sample_mood_1", "mood": "good", "date": "2026-05-24", "notes": ""},
+            {"id": "sample_mood_2", "mood": "okay", "date": "2026-05-23", "notes": "Feeling a bit tired"},
+            {"id": "sample_mood_3", "mood": "low", "date": "2026-05-22", "notes": ""},
+        ])
+        return jsonify({
+            "moods": sorted(user_moods, key=lambda m: m.get("date", ""), reverse=True),
+        }), 200
+
+    try:
+        moods_ref = (
+            db.collection("users").document(uid)
+            .collection("moods")
+            .order_by("date", direction=firestore.Query.DESCENDING)
+        )
+        docs = moods_ref.stream()
+        moods_list = []
+        for doc in docs:
+            m = doc.to_dict()
+            m["id"] = doc.id
+            moods_list.append(m)
+        return jsonify({"moods": moods_list}), 200
+    except Exception as e:
+        logger.error(f"Error fetching moods: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
 # ----------------- AI HEALTH CHAT ENDPOINTS -----------------
 
 @app.route("/chat", methods=["POST"])
@@ -902,7 +1162,6 @@ def get_insights():
 
 
 # ----------------- ACCOUNT MANAGEMENT ENDPOINTS -----------------
-
 @app.route("/delete-account", methods=["DELETE"])
 @limiter.limit(RATE_LIMITS["delete_account"])
 @authenticated_user
@@ -923,6 +1182,7 @@ def delete_account():
 
     if not firebase_initialized:
         mock_cycles.pop(uid, None)
+        mock_symptoms.pop(uid, None) # 🛠️ FIX 3: Clear mock symptoms from RAM
         return jsonify({
             "message": "Account and all health data permanently deleted (Mock Mode)",
             "deletedCollections": ["cycles", "symptoms", "moods", "profile"]
@@ -931,26 +1191,33 @@ def delete_account():
     try:
         user_doc = db.collection("users").document(uid)
 
+        # 1. Delete all subcollections
         subcollections = ["cycles", "symptoms", "moods"]
         for coll_name in subcollections:
             docs = user_doc.collection(coll_name).stream()
             for doc in docs:
                 doc.reference.delete()
+                
+        # 🛠️ FIX 1: Find and delete any orphaned share links tied to this UID
+        links_query = db.collection("share_links").where("uid", "==", uid).stream()
+        for link_doc in links_query:
+            link_doc.reference.delete()
 
+        # 2. Delete the main user document
         user_doc.delete()
 
+        # 3. Delete the Firebase Auth user
         auth.delete_user(uid)
 
         logger.info(f"Account permanently deleted: {uid}")
         return jsonify({
             "message": "Account and all health data permanently deleted",
-            "deletedCollections": subcollections + ["profile"]
+            "deletedCollections": subcollections + ["share_links", "profile"]
         }), 200
 
     except Exception as e:
         logger.error(f"Account deletion error: {str(e)}")
         return jsonify({"error": f"Failed to delete account: {str(e)}"}), 500
-
 
 # ----------------- PROFILE MANAGEMENT ENDPOINTS -----------------
 
@@ -1040,9 +1307,6 @@ def update_profile():
 
 # ----------------- CYCLE SHARING ENDPOINTS -----------------
 
-share_links = {}
-
-
 @app.route("/share/create", methods=["POST"])
 @limiter.limit(RATE_LIMITS["share_create"])
 @authenticated_user
@@ -1055,8 +1319,10 @@ def create_share_link():
     uid = request.user_id
     expires_in_days = data.get("expiresInDays", 7)
 
-    if not isinstance(expires_in_days, int) or expires_in_days < 1 or expires_in_days > 90:
-        return jsonify({"error": "expiresInDays must be between 1 and 90"}), 400
+    # 🛠️ FIX: Changed isinstance to a strict type() check to block booleans.
+    # (In Python, isinstance(True, int) is True, which creates a type-casting loophole!)
+    if type(expires_in_days) is not int or expires_in_days < 1 or expires_in_days > 90:
+        return jsonify({"error": "expiresInDays must be an integer between 1 and 90"}), 400
 
     # Use a cryptographically secure random token rather than a hash of
     # uid + timestamp. The previous scheme was derivable from a known uid and a
@@ -1093,113 +1359,6 @@ def create_share_link():
         "expiresInDays": expires_in_days,
         "shareUrl": f"/share/view/{token}",
     }), 201
-
-
-@app.route("/share/view/<token>", methods=["GET"])
-def view_shared_data(token):
-    """
-    Public endpoint - returns cycle data for a valid, non-expired share token.
-    No authentication required (the token IS the auth).
-    """
-    import time
-
-    link = share_links.get(token)
-
-    if firebase_initialized and not link:
-        try:
-            doc = db.collection("share_links").document(token).get()
-            if doc.exists:
-                link = doc.to_dict()
-        except Exception:
-            pass
-
-    if not link:
-        return jsonify({"error": "Share link not found"}), 404
-
-    if not link.get("active"):
-        return jsonify({"error": "Share link has been revoked"}), 403
-
-    if link.get("expiresAt", 0) < int(time.time()):
-        return jsonify({"error": "Share link has expired"}), 410
-
-    uid = link["uid"]
-
-    if not firebase_initialized:
-        cycles = mock_cycles.get(uid, [
-            {"startDate": "2026-04-28", "endDate": "2026-05-02", "flowIntensity": "Medium"},
-            {"startDate": "2026-05-27", "endDate": "2026-05-31", "flowIntensity": "Low"},
-        ])
-        return jsonify({
-            "cycles": cycles,
-            "prediction": predict_cycle(cycles if isinstance(cycles, list) else []),
-            "sharedBy": "Aarini User",
-            "disclaimer": "Shared health data - for informational purposes only.",
-        }), 200
-
-    try:
-        cycles_ref = (
-            db.collection("users").document(uid)
-            .collection("cycles")
-            .order_by("startDate", direction=firestore.Query.DESCENDING)
-            .limit(12)
-        )
-        cycles = [doc.to_dict() for doc in cycles_ref.stream()]
-        profile = db.collection("users").document(uid).get().to_dict() or {}
-
-        return jsonify({
-            "cycles": cycles,
-            "prediction": predict_cycle(cycles, fallback_cycle_length=profile.get("cycleLength", 28)),
-            "sharedBy": profile.get("name", "Aarini User"),
-            "disclaimer": "Shared health data - for informational purposes only.",
-        }), 200
-    except Exception as e:
-        logger.error(f"Error fetching shared data: {str(e)}")
-        return jsonify({"error": "Failed to retrieve shared data"}), 500
-
-
-@app.route("/share/revoke", methods=["POST"])
-@authenticated_user
-def revoke_share_link():
-    """
-    Revokes an active share link.
-    Expected Payload: { token }
-    """
-    data = request.get_json() or {}
-    token = data.get("token")
-    uid = request.user_id
-
-    if not token:
-        return jsonify({"error": "Token is required"}), 400
-
-    link = share_links.get(token)
-    if link and link["uid"] != uid:
-        return jsonify({"error": "Not authorized to revoke this link"}), 403
-
-    if not link and not firebase_initialized:
-        return jsonify({"error": "Share link not found"}), 404
-
-    if link:
-        link["active"] = False
-
-    if firebase_initialized:
-        try:
-            doc_ref = db.collection("share_links").document(token)
-            doc = doc_ref.get()
-            if doc.exists and doc.to_dict().get("uid") == uid:
-                doc_ref.update({"active": False})
-            elif not doc.exists:
-                return jsonify({"error": "Share link not found"}), 404
-        except Exception as e:
-            logger.error(f"Error revoking share link: {str(e)}")
-            return jsonify({"error": str(e)}), 500
-
-    return jsonify({"message": "Share link revoked", "token": token}), 200
-
-
-if __name__ == "__main__":
-    port = int(os.getenv("PORT", 5000))
-    debug_mode = os.getenv("FLASK_DEBUG", "0") == "1"
-
     # Startup summary
     gemini_status = "configured" if os.getenv("GEMINI_API_KEY") else "mock (no GEMINI_API_KEY)"
     firebase_status = "connected" if firebase_initialized else "mock"

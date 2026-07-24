@@ -46,6 +46,7 @@ RATE_LIMITS = {
     "chat_stream": "20 per minute",
     "add_cycle": "30 per minute",
     "add_symptom": "30 per minute",
+    "add_mood": "30 per minute",
     "delete_account": "3 per hour",
     "share_create": "10 per hour",
 }

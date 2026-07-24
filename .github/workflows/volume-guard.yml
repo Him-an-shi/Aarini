@@ -1,0 +1,55 @@
+name: Contribution Volume Guard
+
+on:
+  issues:
+    types: [opened]
+  pull_request_target:
+    types: [opened]
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  volume-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const author = context.payload.issue?.user?.login || context.payload.pull_request?.user?.login;
+            if (!author) return;
+
+            // Don't flag the maintainer
+            if (author === 'Him-an-shi') return;
+
+            const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+            const { data: items } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              creator: author,
+              since: since,
+              state: 'all',
+              per_page: 100,
+            });
+
+            const recentCount = items.filter(i =>
+              new Date(i.created_at) > new Date(since)
+            ).length;
+
+            if (recentCount > 5) {
+              const issueNumber = context.payload.issue?.number || context.payload.pull_request?.number;
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                body: `@Him-an-shi Heads up: **@${author}** has opened **${recentCount} items** in the last 24 hours. Flagging for review to check for potential bulk/automated submissions.`
+              });
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                labels: ['needs-triage']
+              });
+            }

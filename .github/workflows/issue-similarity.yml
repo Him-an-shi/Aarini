@@ -1,0 +1,78 @@
+name: Issue Similarity Check
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+
+jobs:
+  similarity-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const author = issue.user.login;
+            const currentBody = issue.body || '';
+
+            // Don't check the maintainer
+            if (author === 'Him-an-shi') return;
+
+            // Skip short issues (can't meaningfully compare)
+            if (currentBody.length < 200) return;
+
+            // Get author's other open issues
+            const { data: authorIssues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              creator: author,
+              state: 'open',
+              per_page: 30,
+            });
+
+            // Simple word-set similarity (Jaccard index)
+            const tokenize = (text) => {
+              return new Set(
+                text.toLowerCase()
+                  .replace(/[^a-z0-9\s]/g, ' ')
+                  .split(/\s+/)
+                  .filter(w => w.length > 4)
+              );
+            };
+
+            const jaccard = (a, b) => {
+              const intersection = [...a].filter(x => b.has(x));
+              const union = new Set([...a, ...b]);
+              return union.size > 0 ? intersection.length / union.size : 0;
+            };
+
+            const currentTokens = tokenize(currentBody);
+            let highSimilarityCount = 0;
+
+            for (const other of authorIssues) {
+              if (other.number === issue.number) continue;
+              const otherTokens = tokenize(other.body || '');
+              const sim = jaccard(currentTokens, otherTokens);
+              if (sim > 0.55) {
+                highSimilarityCount++;
+              }
+            }
+
+            // Flag if 3+ existing issues are highly similar to this one
+            if (highSimilarityCount >= 3) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `This issue has high textual similarity to ${highSimilarityCount} other open issues from the same author. This may indicate a templated bulk submission. @Him-an-shi please review if these should be consolidated into an umbrella issue.`
+              });
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                labels: ['potential-bulk-submission']
+              });
+            }

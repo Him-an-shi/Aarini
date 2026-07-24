@@ -16,6 +16,9 @@ class TestDeleteAccount:
         assert "deleted" in data["message"].lower()
         assert "deletedCollections" in data
         assert "cycles" in data["deletedCollections"]
+        # 🛠️ FIX FOR ISSUE #120: Ensure symptoms and moods are actively verified as purged
+        assert "symptoms" in data["deletedCollections"]
+        assert "moods" in data["deletedCollections"]
 
     def test_delete_account_without_confirmation(self, client, auth_headers):
         """Missing confirm field returns 400."""
@@ -39,3 +42,10 @@ class TestDeleteAccount:
         resp = client.delete("/delete-account", headers=auth_headers)
 
         assert resp.status_code == 400
+
+    # 🛠️ FIX FOR ISSUE #120: Defend against unauthorized deletion attempts
+    def test_delete_account_no_auth(self, client):
+        """Unauthenticated request returns 401."""
+        resp = client.delete("/delete-account", json={"confirm": True})
+
+        assert resp.status_code == 401

@@ -7,6 +7,7 @@ import { LanguageProvider } from './i18n/LanguageContext';
 import { NetworkProvider } from './context/NetworkContext';
 import { AppNavigator } from './navigation/AppNavigator';
 import { ThemeToggle } from './components/ThemeToggle';
+import { AppLockGate } from './components/AppLockGate';
 import { OfflineBanner } from './components/OfflineBanner';
 
 const AppContent = () => {
@@ -14,9 +15,11 @@ const AppContent = () => {
 
   return (
     <AuthProvider>
-      <OfflineBanner />
-      <AppNavigator />
-      <ThemeToggle />
+      <AppLockGate>
+        <OfflineBanner />
+        <AppNavigator />
+        <ThemeToggle />
+      </AppLockGate>
       <StatusBar style={isDark ? 'light' : 'dark'} />
     </AuthProvider>
   );

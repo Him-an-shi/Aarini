@@ -16,11 +16,11 @@ import { MoodTrackingScreen } from '../screens/MoodTrackingScreen';
 import { SymptomLogScreen } from '../screens/SymptomLogScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { ShareScreen } from '../screens/ShareScreen';
-import { ChatHistoryScreen } from '../screens/ChatHistoryScreen';
+import { ExportScreen } from '../screens/ExportScreen';
 import { OnboardingScreen } from '../screens/OnboardingScreen';
 import { NotificationPrefsScreen } from '../screens/NotificationPrefsScreen';
 import { MedicationScreen } from '../screens/MedicationScreen';
-import { ProfileScreen } from '../screens/ProfileScreen';
+import { CycleDetailScreen } from '../screens/CycleDetailScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -91,7 +91,7 @@ const AppStack = ({ initialRoute = 'Tabs' }) => (
     <Stack.Screen name="HealthDashboard" component={HealthDashboardScreen} />
     <Stack.Screen name="Achievements" component={AchievementsScreen} />
     <Stack.Screen name="Share" component={ShareScreen} />
-    <Stack.Screen name="ChatHistory" component={ChatHistoryScreen} />
+    <Stack.Screen name="ExportScreen" component={ExportScreen} />
   </Stack.Navigator>
 );
 

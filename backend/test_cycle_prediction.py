@@ -154,5 +154,143 @@ class CyclePredictionTests(unittest.TestCase):
         self.assertIsNotNone(result["nextPeriodStart"])
         self.assertEqual(result["nextPeriodStart"], "2026-06-07") # May 10th + 28 days
 
+
+class ConfidenceIntervalTests(unittest.TestCase):
+    """Tests for bootstrap confidence intervals and confidence scoring."""
+
+    def test_regular_cycles_produce_narrow_intervals(self):
+        """Regular 28-day cycles should produce tight CIs with high confidence."""
+        cycles = [
+            {"startDate": "2026-01-01", "endDate": "2026-01-05"},
+            {"startDate": "2026-01-29", "endDate": "2026-02-02"},
+            {"startDate": "2026-02-26", "endDate": "2026-03-02"},
+            {"startDate": "2026-03-26", "endDate": "2026-03-30"},
+            {"startDate": "2026-04-23", "endDate": "2026-04-27"},
+            {"startDate": "2026-05-21", "endDate": "2026-05-25"},
+        ]
+        result = predict_cycle(cycles, today="2026-06-01")
+
+        self.assertIn("predictionIntervals", result)
+        intervals = result["predictionIntervals"]
+
+        self.assertIn("ci_80", intervals)
+        self.assertIn("ci_95", intervals)
+        self.assertIn("confidence_score", intervals)
+        self.assertEqual(intervals["method"], "bootstrap")
+        self.assertGreater(intervals["confidence_score"], 0.5)
+
+    def test_irregular_cycles_produce_wide_intervals(self):
+        """Highly variable cycles should produce wider CIs with lower confidence."""
+        cycles = [
+            {"startDate": "2026-01-01", "endDate": "2026-01-05"},
+            {"startDate": "2026-01-22", "endDate": "2026-01-26"},  # 21 days
+            {"startDate": "2026-02-25", "endDate": "2026-03-01"},  # 34 days
+            {"startDate": "2026-03-15", "endDate": "2026-03-19"},  # 18 days
+            {"startDate": "2026-04-20", "endDate": "2026-04-24"},  # 36 days
+        ]
+        result = predict_cycle(cycles, today="2026-05-01")
+
+        intervals = result["predictionIntervals"]
+        self.assertIn("ci_95", intervals)
+        # Irregular cycles should have lower confidence
+        self.assertLess(intervals["confidence_score"], 0.7)
+
+    def test_minimal_data_uses_default_wide_intervals(self):
+        """With only 1-2 cycles, should fall back to wide default intervals."""
+        cycles = [
+            {"startDate": "2026-01-01", "endDate": "2026-01-05"},
+            {"startDate": "2026-01-29", "endDate": "2026-02-02"},
+        ]
+        result = predict_cycle(cycles, today="2026-02-15")
+
+        intervals = result["predictionIntervals"]
+        self.assertEqual(intervals["method"], "default_wide")
+        self.assertEqual(intervals["ci_80"]["margin_days"], 5)
+        self.assertEqual(intervals["ci_95"]["margin_days"], 10)
+        self.assertLess(intervals["confidence_score"], 0.4)
+
+    def test_empty_cycles_no_intervals(self):
+        """No cycle history should not include predictionIntervals."""
+        result = predict_cycle([], today="2026-05-01")
+        self.assertNotIn("predictionIntervals", result)
+        self.assertFalse(result["hasHistory"])
+
+    def test_confidence_score_increases_with_more_data(self):
+        """More regular cycles should produce higher confidence scores."""
+        base_cycles = [
+            {"startDate": "2026-01-01", "endDate": "2026-01-05"},
+            {"startDate": "2026-01-29", "endDate": "2026-02-02"},
+            {"startDate": "2026-02-26", "endDate": "2026-03-02"},
+        ]
+        result_3 = predict_cycle(base_cycles, today="2026-03-15")
+
+        more_cycles = base_cycles + [
+            {"startDate": "2026-03-26", "endDate": "2026-03-30"},
+            {"startDate": "2026-04-23", "endDate": "2026-04-27"},
+            {"startDate": "2026-05-21", "endDate": "2026-05-25"},
+            {"startDate": "2026-06-18", "endDate": "2026-06-22"},
+            {"startDate": "2026-07-16", "endDate": "2026-07-20"},
+        ]
+        result_8 = predict_cycle(more_cycles, today="2026-08-01")
+
+        score_3 = result_3["predictionIntervals"]["confidence_score"]
+        score_8 = result_8["predictionIntervals"]["confidence_score"]
+        self.assertGreater(score_8, score_3)
+
+    def test_confidence_score_range(self):
+        """Confidence score should always be between 0 and 1."""
+        cycles = [
+            {"startDate": "2026-01-01", "endDate": "2026-01-05"},
+            {"startDate": "2026-01-29", "endDate": "2026-02-02"},
+            {"startDate": "2026-02-26", "endDate": "2026-03-02"},
+            {"startDate": "2026-03-26", "endDate": "2026-03-30"},
+        ]
+        result = predict_cycle(cycles, today="2026-04-10")
+        score = result["predictionIntervals"]["confidence_score"]
+        self.assertGreaterEqual(score, 0.0)
+        self.assertLessEqual(score, 1.0)
+
+    def test_bootstrap_deterministic_with_seed(self):
+        """Bootstrap with fixed seed should produce identical results."""
+        from cycle_prediction import _bootstrap_resample
+        values = [28, 29, 27, 28, 30, 28]
+        result1 = _bootstrap_resample(values, seed=42)
+        result2 = _bootstrap_resample(values, seed=42)
+        self.assertEqual(result1, result2)
+
+    def test_ci_bounds_surround_point_estimate(self):
+        """The 80% CI should be contained within the 95% CI."""
+        cycles = [
+            {"startDate": "2026-01-01", "endDate": "2026-01-05"},
+            {"startDate": "2026-01-29", "endDate": "2026-02-02"},
+            {"startDate": "2026-02-26", "endDate": "2026-03-02"},
+            {"startDate": "2026-03-26", "endDate": "2026-03-30"},
+            {"startDate": "2026-04-23", "endDate": "2026-04-27"},
+        ]
+        result = predict_cycle(cycles, today="2026-05-10")
+        intervals = result["predictionIntervals"]
+
+        ci_80_lower = intervals["ci_80"]["lower"]
+        ci_80_upper = intervals["ci_80"]["upper"]
+        ci_95_lower = intervals["ci_95"]["lower"]
+        ci_95_upper = intervals["ci_95"]["upper"]
+
+        # 95% CI should be wider than or equal to 80% CI
+        self.assertLessEqual(ci_95_lower, ci_80_lower)
+        self.assertGreaterEqual(ci_95_upper, ci_80_upper)
+
+    def test_n_cycles_reported_correctly(self):
+        """The intervals should report the correct number of cycles used."""
+        cycles = [
+            {"startDate": "2026-01-01", "endDate": "2026-01-05"},
+            {"startDate": "2026-01-29", "endDate": "2026-02-02"},
+            {"startDate": "2026-02-26", "endDate": "2026-03-02"},
+            {"startDate": "2026-03-26", "endDate": "2026-03-30"},
+        ]
+        result = predict_cycle(cycles, today="2026-04-10")
+        # 4 cycles = 3 intervals
+        self.assertEqual(result["predictionIntervals"]["n_cycles"], 3)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -4,11 +4,9 @@
 
 # 🌸 Aarini
 
-### *Your AI-Powered Women's Hormonal Wellness & Period Health Companion*
+### _Your AI-Powered Women's Hormonal Wellness & Period Health Companion_
 
-
-
-> **Aarini** — *Meaning "bringer of light"* — is a compassionate, intelligent, and privacy-first health companion built to help every woman understand her body, honor her cycle, and thrive at every phase of life.
+> **Aarini** — _Meaning "bringer of light"_ — is a compassionate, intelligent, and privacy-first health companion built to help every woman understand her body, honor her cycle, and thrive at every phase of life.
 
 <br/>
 
@@ -64,7 +62,7 @@ By combining real-time symptom logging, cycle intelligence, mood tracking, and t
 - Build a rich, longitudinal health history
 - Receive personalized insights — not generic advice
 
-> *Because every woman deserves a health companion that actually listens.*
+> _Because every woman deserves a health companion that actually listens._
 
 ---
 
@@ -75,33 +73,42 @@ By combining real-time symptom logging, cycle intelligence, mood tracking, and t
     <td width="50%">
 
 ### 🗓️ Period Tracking
+
 Log and monitor your menstrual cycle dates with precision. Aarini learns your unique rhythm and helps you anticipate every phase — menstrual, follicular, ovulation, and luteal.
 
 ### 😊 Mood Tracking
+
 Track emotional patterns day-by-day. Understand the hormonal roots of mood shifts and gain insights that help you plan, prepare, and practice self-compassion.
 
 ### 🩹 Symptom Logging
+
 From cramps and bloating to headaches and fatigue — log any symptom with ease. Build a detailed health history that puts you in control during doctor's appointments.
 
 ### 🤖 AI Chat Assistant
+
 Chat with Aarini's intelligent health assistant, powered by **Google Gemini AI**. Ask anything — from "Why do I feel so tired before my period?" to deeper hormonal health questions — and receive warm, accurate, empathetic responses.
 
     </td>
     <td width="50%">
 
 ### 💡 Wellness Insights
+
 Receive personalized, AI-generated wellness insights based on your logged data. Aarini connects the dots between your cycle, mood, symptoms, and lifestyle — giving you actionable, compassionate guidance.
 
 ### 🔐 Firebase Authentication
+
 Secure, seamless user authentication powered by Firebase. Your health data belongs to you — always protected, never shared.
 
 ### ☁️ Secure Cloud Storage
+
 All your health data is encrypted and securely stored in **Firebase Firestore** — accessible only to you, across all your devices.
 
 ### 📊 Health Dashboard
+
 A beautifully designed dashboard that visualizes your cycle history, mood trends, and symptom patterns at a glance — turning your data into a story you can understand.
 
     </td>
+
   </tr>
 </table>
 
@@ -109,14 +116,14 @@ A beautifully designed dashboard that visualizes your cycle history, mood trends
 
 ## 🛠️ Tech Stack
 
-| Layer | Technology | Purpose |
-|-------|-----------|---------|
-| 📱 **Frontend** | React Native + Expo | Cross-platform mobile application (iOS & Android) |
-| ⚙️ **Backend** | Flask (Python) | RESTful API server and business logic |
-| 🗄️ **Database** | Firebase Firestore | Real-time NoSQL cloud database |
-| 🔐 **Authentication** | Firebase Authentication | Secure user identity management |
-| 🤖 **AI** | Google Gemini API | Conversational AI health assistant & insights |
-| 🚀 **Deployment** | Render | Cloud backend hosting and deployment |
+| Layer                 | Technology              | Purpose                                           |
+| --------------------- | ----------------------- | ------------------------------------------------- |
+| 📱 **Frontend**       | React Native + Expo     | Cross-platform mobile application (iOS & Android) |
+| ⚙️ **Backend**        | Flask (Python)          | RESTful API server and business logic             |
+| 🗄️ **Database**       | Firebase Firestore      | Real-time NoSQL cloud database                    |
+| 🔐 **Authentication** | Firebase Authentication | Secure user identity management                   |
+| 🤖 **AI**             | Google Gemini API       | Conversational AI health assistant & insights     |
+| 🚀 **Deployment**     | Render                  | Cloud backend hosting and deployment              |
 
 ---
 
@@ -151,6 +158,7 @@ A beautifully designed dashboard that visualizes your cycle history, mood trends
 ```
 
 **Data Flow:**
+
 ```
 User Action → React Native App
            → Flask REST API (authentication + validation)
@@ -304,6 +312,7 @@ The backend will start at `http://localhost:5000`
 7. Set the path in your `.env` as shown in the [Environment Variables](#-environment-variables) section
 
 **Firestore Security Rules:**
+
 ```javascript
 rules_version = '2';
 service cloud.firestore {
@@ -323,10 +332,10 @@ In `frontend/services/api.js`, update the base URL to point to your Flask backen
 
 ```javascript
 // For local development
-const BASE_URL = 'http://localhost:5000';
+const BASE_URL = 'http://localhost:5000'
 
 // For production (Render deployment)
-const BASE_URL = 'https://your-app-name.onrender.com';
+const BASE_URL = 'https://your-app-name.onrender.com'
 ```
 
 ---
@@ -370,6 +379,7 @@ SECRET_KEY=your_super_secret_key_here
 Base URL: `http://localhost:5000` (development) | `https://your-app.onrender.com` (production)
 
 All protected endpoints require the header:
+
 ```
 Authorization: Bearer <firebase_id_token>
 ```
@@ -378,12 +388,13 @@ Authorization: Bearer <firebase_id_token>
 
 ### 🔐 Authentication
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|:---:|
-| `POST` | `/signup` | Register a new user account | ❌ |
-| `POST` | `/login` | Authenticate user and get token | ❌ |
+| Method | Endpoint  | Description                     | Auth Required |
+| ------ | --------- | ------------------------------- | :-----------: |
+| `POST` | `/signup` | Register a new user account     |      ❌       |
+| `POST` | `/login`  | Authenticate user and get token |      ❌       |
 
 **`POST /signup`**
+
 ```json
 // Request Body
 {
@@ -400,6 +411,7 @@ Authorization: Bearer <firebase_id_token>
 ```
 
 **`POST /login`**
+
 ```json
 // Request Body
 {
@@ -419,12 +431,13 @@ Authorization: Bearer <firebase_id_token>
 
 ### 🗓️ Cycle Tracking
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|:---:|
-| `POST` | `/add-cycle` | Log a new menstrual cycle | ✅ |
-| `GET` | `/cycles` | Retrieve full cycle history | ✅ |
+| Method | Endpoint     | Description                 | Auth Required |
+| ------ | ------------ | --------------------------- | :-----------: |
+| `POST` | `/add-cycle` | Log a new menstrual cycle   |      ✅       |
+| `GET`  | `/cycles`    | Retrieve full cycle history |      ✅       |
 
 **`POST /add-cycle`**
+
 ```json
 // Request Body
 {
@@ -442,6 +455,7 @@ Authorization: Bearer <firebase_id_token>
 ```
 
 **`GET /cycles`**
+
 ```json
 // Response 200
 {
@@ -464,12 +478,13 @@ Authorization: Bearer <firebase_id_token>
 
 ### 🩹 Symptom Logging
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|:---:|
-| `POST` | `/add-symptom` | Log a new symptom entry | ✅ |
-| `GET` | `/symptoms` | Retrieve symptom history | ✅ |
+| Method | Endpoint       | Description              | Auth Required |
+| ------ | -------------- | ------------------------ | :-----------: |
+| `POST` | `/add-symptom` | Log a new symptom entry  |      ✅       |
+| `GET`  | `/symptoms`    | Retrieve symptom history |      ✅       |
 
 **`POST /add-symptom`**
+
 ```json
 // Request Body
 {
@@ -487,6 +502,7 @@ Authorization: Bearer <firebase_id_token>
 ```
 
 **`GET /symptoms`**
+
 ```json
 // Response 200
 {
@@ -507,11 +523,12 @@ Authorization: Bearer <firebase_id_token>
 
 ### 🤖 AI Chat Assistant
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|:---:|
-| `POST` | `/chat` | Send message to AI health assistant | ✅ |
+| Method | Endpoint | Description                         | Auth Required |
+| ------ | -------- | ----------------------------------- | :-----------: |
+| `POST` | `/chat`  | Send message to AI health assistant |      ✅       |
 
 **`POST /chat`**
+
 ```json
 // Request Body
 {
@@ -537,11 +554,12 @@ Authorization: Bearer <firebase_id_token>
 
 ### 💡 Wellness Insights
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|:---:|
-| `GET` | `/insights` | Get personalized AI wellness insights | ✅ |
+| Method | Endpoint    | Description                           | Auth Required |
+| ------ | ----------- | ------------------------------------- | :-----------: |
+| `GET`  | `/insights` | Get personalized AI wellness insights |      ✅       |
 
 **`GET /insights`**
+
 ```json
 // Response 200
 {
@@ -622,25 +640,25 @@ git push origin feature/your-amazing-feature
 
 ### Contribution Guidelines
 
-| Commit Type | Prefix | Example |
-|------------|--------|---------|
-| New Feature | `✨ feat:` | `✨ feat: add ovulation prediction` |
-| Bug Fix | `🐛 fix:` | `🐛 fix: cycle date validation` |
-| Documentation | `📚 docs:` | `📚 docs: update API reference` |
-| Styling | `💅 style:` | `💅 style: improve dashboard UI` |
-| Refactoring | `♻️ refactor:` | `♻️ refactor: optimize Firebase queries` |
-| Tests | `✅ test:` | `✅ test: add cycle tracking unit tests` |
+| Commit Type   | Prefix         | Example                                  |
+| ------------- | -------------- | ---------------------------------------- |
+| New Feature   | `✨ feat:`     | `✨ feat: add ovulation prediction`      |
+| Bug Fix       | `🐛 fix:`      | `🐛 fix: cycle date validation`          |
+| Documentation | `📚 docs:`     | `📚 docs: update API reference`          |
+| Styling       | `💅 style:`    | `💅 style: improve dashboard UI`         |
+| Refactoring   | `♻️ refactor:` | `♻️ refactor: optimize Firebase queries` |
+| Tests         | `✅ test:`     | `✅ test: add cycle tracking unit tests` |
 
 ### We're Looking For
 
-| Role | Contributions |
-|------|--------------|
-| 📱 **React Native Developers** | UI components, new screens, animations, Expo features |
-| 🐍 **Python Developers** | Flask routes, AI integration, data processing |
-| 🔥 **Firebase Developers** | Firestore rules, auth flows, cloud functions |
-| 🎨 **UI/UX Designers** | Design systems, accessibility, user research |
-| ✍️ **Technical Writers** | Documentation, tutorials, API guides |
-| 💜 **Women's Health Advocates** | Feature ideas, user stories, real-world insights |
+| Role                            | Contributions                                         |
+| ------------------------------- | ----------------------------------------------------- |
+| 📱 **React Native Developers**  | UI components, new screens, animations, Expo features |
+| 🐍 **Python Developers**        | Flask routes, AI integration, data processing         |
+| 🔥 **Firebase Developers**      | Firestore rules, auth flows, cloud functions          |
+| 🎨 **UI/UX Designers**          | Design systems, accessibility, user research          |
+| ✍️ **Technical Writers**        | Documentation, tutorials, API guides                  |
+| 💜 **Women's Health Advocates** | Feature ideas, user stories, real-world insights      |
 
 ---
 
@@ -724,9 +742,9 @@ See the full [LICENSE](LICENSE) file for details.
 
 <div align="center">
 
-*For every woman who was told her pain was "just cramps."*
-*For every woman who silently tracked her symptoms in a notes app, hoping someone would listen.*
-*For every woman who deserves a health companion as dedicated as she is.*
+_For every woman who was told her pain was "just cramps."_
+_For every woman who silently tracked her symptoms in a notes app, hoping someone would listen._
+_For every woman who deserves a health companion as dedicated as she is._
 
 **Aarini was built for you.**
 
@@ -738,7 +756,7 @@ Because the future of women's wellness is **intelligent, empathetic, and open.**
 
 Built with 💜 by [Himanshi](https://github.com/Him-an-shi) and the Aarini Community
 
-*"When women thrive, the world thrives."*
+_"When women thrive, the world thrives."_
 
 <br/>
 

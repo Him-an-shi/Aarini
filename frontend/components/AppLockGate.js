@@ -3,30 +3,39 @@
  * Wraps app content and shows a lock screen when returning from background.
  */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import {
-  View, Text, StyleSheet, TextInput, TouchableOpacity,
-  AppState, Animated,
-} from 'react-native';
-import { Lock, Fingerprint } from 'lucide-react-native';
-import { useTheme } from '../context/ThemeContext';
-import { useLanguage } from '../i18n/LanguageContext';
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  AppState,
+  Animated,
+} from 'react-native'
+import { Lock, Fingerprint } from 'lucide-react-native'
+import { useTheme } from '../context/ThemeContext'
+import { useLanguage } from '../i18n/LanguageContext'
 import {
-  isLockEnabled, shouldLock, updateLastActive,
-  authenticateWithBiometric, isBiometricAvailable, verifyPIN,
-} from '../services/appLockService';
+  isLockEnabled,
+  shouldLock,
+  updateLastActive,
+  authenticateWithBiometric,
+  isBiometricAvailable,
+  verifyPIN,
+} from '../services/appLockService'
 
 export function AppLockGate({ children }) {
-  const [locked, setLocked] = useState(false);
-  const [checking, setChecking] = useState(true);
-  const [pinInput, setPinInput] = useState('');
-  const [pinError, setPinError] = useState(false);
-  const [showPinFallback, setShowPinFallback] = useState(false);
-  const appState = useRef(AppState.currentState);
-  const fadeAnim = useRef(new Animated.Value(1)).current;
-  const { theme } = useTheme();
-  const { t } = useLanguage();
-  const { colors } = theme;
+  const [locked, setLocked] = useState(false)
+  const [checking, setChecking] = useState(true)
+  const [pinInput, setPinInput] = useState('')
+  const [pinError, setPinError] = useState(false)
+  const [showPinFallback, setShowPinFallback] = useState(false)
+  const appState = useRef(AppState.currentState)
+  const fadeAnim = useRef(new Animated.Value(1)).current
+  const { theme } = useTheme()
+  const { t } = useLanguage()
+  const { colors } = theme
 
   const unlock = useCallback(() => {
     Animated.timing(fadeAnim, {
@@ -34,93 +43,96 @@ export function AppLockGate({ children }) {
       duration: 200,
       useNativeDriver: true,
     }).start(() => {
-      setLocked(false);
-      setPinInput('');
-      setPinError(false);
-      setShowPinFallback(false);
-      fadeAnim.setValue(1);
-    });
-    updateLastActive();
-  }, [fadeAnim]);
+      setLocked(false)
+      setPinInput('')
+      setPinError(false)
+      setShowPinFallback(false)
+      fadeAnim.setValue(1)
+    })
+    updateLastActive()
+  }, [fadeAnim])
 
   const attemptBiometric = useCallback(async () => {
-    const available = await isBiometricAvailable();
+    const available = await isBiometricAvailable()
     if (!available) {
-      setShowPinFallback(true);
-      return;
+      setShowPinFallback(true)
+      return
     }
-    const success = await authenticateWithBiometric();
+    const success = await authenticateWithBiometric()
     if (success) {
-      unlock();
+      unlock()
     } else {
-      setShowPinFallback(true);
+      setShowPinFallback(true)
     }
-  }, [unlock]);
+  }, [unlock])
 
   useEffect(() => {
-    (async () => {
-      const enabled = await isLockEnabled();
-      setChecking(false);
-      if (!enabled) return;
-      setLocked(true);
-      attemptBiometric();
-    })();
-  }, [attemptBiometric]);
+    ;(async () => {
+      const enabled = await isLockEnabled()
+      setChecking(false)
+      if (!enabled) return
+      setLocked(true)
+      attemptBiometric()
+    })()
+  }, [attemptBiometric])
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', async (nextState) => {
       if (appState.current.match(/inactive|background/) && nextState === 'active') {
-        const enabled = await isLockEnabled();
+        const enabled = await isLockEnabled()
         if (enabled && shouldLock()) {
-          setLocked(true);
-          setShowPinFallback(false);
-          setPinInput('');
-          attemptBiometric();
+          setLocked(true)
+          setShowPinFallback(false)
+          setPinInput('')
+          attemptBiometric()
         }
       }
       if (nextState.match(/inactive|background/)) {
-        updateLastActive();
+        updateLastActive()
       }
-      appState.current = nextState;
-    });
-    return () => sub.remove();
-  }, [attemptBiometric]);
+      appState.current = nextState
+    })
+    return () => sub.remove()
+  }, [attemptBiometric])
 
   const handlePinSubmit = useCallback(async () => {
-    const valid = await verifyPIN(pinInput);
+    const valid = await verifyPIN(pinInput)
     if (valid) {
-      unlock();
+      unlock()
     } else {
-      setPinError(true);
-      setPinInput('');
-      setTimeout(() => setPinError(false), 2000);
+      setPinError(true)
+      setPinInput('')
+      setTimeout(() => setPinError(false), 2000)
     }
-  }, [pinInput, unlock]);
+  }, [pinInput, unlock])
 
   useEffect(() => {
     if (pinInput.length === 4) {
-      handlePinSubmit();
+      handlePinSubmit()
     }
-  }, [pinInput.length, handlePinSubmit]);
+  }, [pinInput.length, handlePinSubmit])
 
-  if (checking) return null;
-  if (!locked) return children;
+  if (checking) return null
+  if (!locked) return children
 
   return (
     <View style={StyleSheet.absoluteFill}>
       {children}
-      <Animated.View style={[styles.overlay, { opacity: fadeAnim, backgroundColor: colors.background }]}>  
+      <Animated.View
+        style={[styles.overlay, { opacity: fadeAnim, backgroundColor: colors.background }]}
+      >
         <View style={styles.content}>
           <Lock size={48} color={colors.primary} />
-          <Text style={[styles.title, { color: colors.text }]}>
-            {t('appLock.title')}
-          </Text>
+          <Text style={[styles.title, { color: colors.text }]}>{t('appLock.title')}</Text>
           <Text style={[styles.subtitle, { color: colors.textLight }]}>
             {t('appLock.subtitle')}
           </Text>
 
           {!showPinFallback ? (
-            <TouchableOpacity style={[styles.biometricBtn, { borderColor: colors.border }]} onPress={attemptBiometric}>
+            <TouchableOpacity
+              style={[styles.biometricBtn, { borderColor: colors.border }]}
+              onPress={attemptBiometric}
+            >
               <Fingerprint size={28} color={colors.primary} />
               <Text style={[styles.biometricText, { color: colors.text }]}>
                 {t('appLock.useBiometric')}
@@ -154,9 +166,7 @@ export function AppLockGate({ children }) {
                 autoFocus
                 secureTextEntry
               />
-              {pinError && (
-                <Text style={styles.errorText}>{t('appLock.wrongPin')}</Text>
-              )}
+              {pinError && <Text style={styles.errorText}>{t('appLock.wrongPin')}</Text>}
             </View>
           )}
 
@@ -177,7 +187,7 @@ export function AppLockGate({ children }) {
         </View>
       </Animated.View>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -249,4 +259,4 @@ const styles = StyleSheet.create({
     marginTop: 24,
     fontWeight: '500',
   },
-});
+})

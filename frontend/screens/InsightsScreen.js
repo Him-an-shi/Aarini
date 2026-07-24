@@ -1,21 +1,23 @@
-import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react'
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native'
+import { SkeletonCard } from '../components/SkeletonCard'
+import { Card } from '../components/Card'
+import { EmptyState } from '../components/EmptyState'
+import Svg, { Rect, Polyline, Circle, Line, G } from 'react-native-svg'
 import {
-  View,
-  Text,
-  StyleSheet,
-  SafeAreaView,
-  ScrollView,
-  TouchableOpacity,
-} from 'react-native';
-import { SkeletonCard } from '../components/SkeletonCard';
-import { Card } from '../components/Card';
-import { EmptyState } from '../components/EmptyState';
-import Svg, { Rect, Polyline, Circle, Line, G } from 'react-native-svg';
-import { ArrowLeft, TrendingUp, Smile, Droplet, Activity, Target, Lightbulb, Heart } from 'lucide-react-native';
-import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
-import { useLanguage } from '../i18n/LanguageContext';
-import { predictCycleLocally } from '../utils/cyclePrediction';
+  ArrowLeft,
+  TrendingUp,
+  Smile,
+  Droplet,
+  Activity,
+  Target,
+  Lightbulb,
+  Heart,
+} from 'lucide-react-native'
+import { useAuth } from '../context/AuthContext'
+import { useTheme } from '../context/ThemeContext'
+import { useLanguage } from '../i18n/LanguageContext'
+import { predictCycleLocally } from '../utils/cyclePrediction'
 import {
   computeCycleLengths,
   computePredictionAccuracy,
@@ -23,20 +25,24 @@ import {
   computeCycleVariance,
   computeCycleStability,
   getPhaseAwareTips,
-} from '../utils/analyticsEngine';
-import { calculateCycleQualityScore, analyzeCycleRegularity, analyzeMoodTrendByPhase } from '../utils/patternAnalyzer';
+} from '../utils/analyticsEngine'
+import {
+  calculateCycleQualityScore,
+  analyzeCycleRegularity,
+  analyzeMoodTrendByPhase,
+} from '../utils/patternAnalyzer'
 import {
   computeSymptomPhaseCorrelation,
   generateSymptomPhaseSummary,
-} from '../utils/symptomPhaseCorrelation';
+} from '../utils/symptomPhaseCorrelation'
 import {
   computeMoodCycleCorrelation,
   generatePatternSummary,
   PHASE_COLORS,
-} from '../utils/moodCycleCorrelation';
-import { secureGetItem } from '../utils/secureStorage';
+} from '../utils/moodCycleCorrelation'
+import { secureGetItem } from '../utils/secureStorage'
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000';
+const BACKEND_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000'
 
 // Mood values are mapped to a 1–5 scale for the trend line.
 const MOOD_SCALE = {
@@ -45,169 +51,153 @@ const MOOD_SCALE = {
   okay: 3,
   low: 2,
   bad: 1,
-};
+}
 
 export const InsightsScreen = ({ navigation }) => {
-  const { userToken, user } = useAuth();
-  const { theme } = useTheme();
-  const { t } = useLanguage();
-  const { colors, typography, spacing } = theme;
-  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { userToken, user } = useAuth()
+  const { theme } = useTheme()
+  const { t } = useLanguage()
+  const { colors, typography, spacing } = theme
+  const styles = useMemo(() => createStyles(theme), [theme])
 
-  const [loading, setLoading] = useState(true);
-  const [cycles, setCycles] = useState([]);
-  const [symptoms, setSymptoms] = useState([]);
-  const [moods, setMoods] = useState([]);
-  const [moodEntries, setMoodEntries] = useState({});
+  const [loading, setLoading] = useState(true)
+  const [cycles, setCycles] = useState([])
+  const [symptoms, setSymptoms] = useState([])
+  const [moods, setMoods] = useState([])
+  const [moodEntries, setMoodEntries] = useState({})
 
   const authHeaders = useMemo(
     () => ({
       'Content-Type': 'application/json',
       Authorization: `Bearer ${userToken}`,
     }),
-    [userToken]
-  );
+    [userToken],
+  )
 
   const loadData = useCallback(async () => {
-    setLoading(true);
+    setLoading(true)
     // Each fetch is independent and fails soft — a single down endpoint
     // shouldn't blank the whole screen (offline-first, matching AuthContext).
     const safeGet = async (path) => {
       try {
-        const res = await fetch(`${BACKEND_URL}${path}`, { headers: authHeaders });
-        if (!res.ok) return null;
-        return await res.json();
+        const res = await fetch(`${BACKEND_URL}${path}`, { headers: authHeaders })
+        if (!res.ok) return null
+        return await res.json()
       } catch (e) {
-        return null;
+        return null
       }
-    };
+    }
 
-    const [cyclesRes, symptomsRes] = await Promise.all([
-      safeGet('/cycles'),
-      safeGet('/symptoms'),
-    ]);
+    const [cyclesRes, symptomsRes] = await Promise.all([safeGet('/cycles'), safeGet('/symptoms')])
 
-    setCycles(cyclesRes?.cycles || []);
-    setSymptoms(symptomsRes?.symptoms || []);
+    setCycles(cyclesRes?.cycles || [])
+    setSymptoms(symptomsRes?.symptoms || [])
     // Mood entries may ride along with symptoms or come from a mood field.
     const moodEntries2 = (symptomsRes?.symptoms || [])
       .filter((s) => s.mood)
-      .map((s) => ({ date: s.date, mood: s.mood }));
-    setMoods(moodEntries2);
+      .map((s) => ({ date: s.date, mood: s.mood }))
+    setMoods(moodEntries2)
 
     // Load local mood entries from secure storage (MoodTrackingScreen data)
     try {
-      const userId = user?.uid || 'local';
-      const raw = await secureGetItem('@aarini_mood_entries', userId);
-      if (raw) setMoodEntries(JSON.parse(raw));
+      const userId = user?.uid || 'local'
+      const raw = await secureGetItem('@aarini_mood_entries', userId)
+      if (raw) setMoodEntries(JSON.parse(raw))
     } catch {
       // Fail silently - correlation just won't show
     }
 
-    setLoading(false);
-  }, [authHeaders]);
+    setLoading(false)
+  }, [authHeaders])
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    loadData()
+  }, [loadData])
 
   // ---- Derived analytics -------------------------------------------------
 
-  const cycleLengths = useMemo(() => computeCycleLengths(cycles), [cycles]);
+  const cycleLengths = useMemo(() => computeCycleLengths(cycles), [cycles])
 
   const avgCycleLength = useMemo(() => {
-    if (!cycleLengths.length) return null;
-    return Math.round(cycleLengths.reduce((a, b) => a + b.length, 0) / cycleLengths.length);
-  }, [cycleLengths]);
+    if (!cycleLengths.length) return null
+    return Math.round(cycleLengths.reduce((a, b) => a + b.length, 0) / cycleLengths.length)
+  }, [cycleLengths])
 
-  const cycleVariance = useMemo(() => computeCycleVariance(cycleLengths), [cycleLengths]);
+  const cycleVariance = useMemo(() => computeCycleVariance(cycleLengths), [cycleLengths])
 
   const recentCycleLengths = useMemo(() => {
-    return cycleLengths.slice(-6).map((c) => c.length);
-  }, [cycleLengths]);
+    return cycleLengths.slice(-6).map((c) => c.length)
+  }, [cycleLengths])
 
-  const predictionAccuracy = useMemo(
-    () => computePredictionAccuracy(cycles),
-    [cycles]
-  );
+  const predictionAccuracy = useMemo(() => computePredictionAccuracy(cycles), [cycles])
 
   const cycleQuality = useMemo(
     () => calculateCycleQualityScore(cycles, symptoms, moodEntries),
-    [cycles, symptoms, moodEntries]
-  );
+    [cycles, symptoms, moodEntries],
+  )
 
-  const cycleStability = useMemo(
-    () => computeCycleStability(cycleLengths),
-    [cycleLengths]
-  );
+  const cycleStability = useMemo(() => computeCycleStability(cycleLengths), [cycleLengths])
 
   const phaseMoodAnalysis = useMemo(
     () => analyzeMoodTrendByPhase(moodEntries, cycles),
-    [moodEntries, cycles]
-  );
+    [moodEntries, cycles],
+  )
 
-  const prediction = useMemo(
-    () => predictCycleLocally(cycles),
-    [cycles]
-  );
+  const prediction = useMemo(() => predictCycleLocally(cycles), [cycles])
 
   const phaseAwareTips = useMemo(
     () => getPhaseAwareTips(prediction.currentPhase || 'Luteal'),
-    [prediction.currentPhase]
-  );
+    [prediction.currentPhase],
+  )
 
   const moodSeries = useMemo(() => {
     return moods
       .map((m) => MOOD_SCALE[String(m.mood).toLowerCase()])
       .filter((n) => typeof n === 'number')
-      .slice(-7);
-  }, [moods]);
+      .slice(-7)
+  }, [moods])
 
-  const symptomFrequency = useMemo(() => computeSymptomFrequency(symptoms), [symptoms]);
+  const symptomFrequency = useMemo(() => computeSymptomFrequency(symptoms), [symptoms])
 
   const symptomPhaseData = useMemo(
     () => computeSymptomPhaseCorrelation(symptoms, cycles),
-    [symptoms, cycles]
-  );
+    [symptoms, cycles],
+  )
 
   const moodCycleCorrelation = useMemo(
     () => computeMoodCycleCorrelation(moodEntries, cycles),
-    [moodEntries, cycles]
-  );
+    [moodEntries, cycles],
+  )
 
   // ---- Sub-components -----------------------------------------------------
 
   const SectionCard = ({ icon, title, subtitle, children, isEmpty, emptyText }) => (
     <Card icon={icon} title={title} subtitle={subtitle}>
-      {isEmpty ? (
-        <EmptyState compact message={emptyText} />
-      ) : (
-        children
-      )}
+      {isEmpty ? <EmptyState compact message={emptyText} /> : children}
     </Card>
-  );
+  )
 
   // Simple SVG line chart for the mood trend (values 1–5).
   const MoodLineChart = ({ data }) => {
-    const width = 300;
-    const height = 140;
-    const pad = 24;
-    const maxV = 5;
-    const minV = 1;
-    const stepX = data.length > 1 ? (width - pad * 2) / (data.length - 1) : 0;
+    const width = 300
+    const height = 140
+    const pad = 24
+    const maxV = 5
+    const minV = 1
+    const stepX = data.length > 1 ? (width - pad * 2) / (data.length - 1) : 0
     const points = data
       .map((v, i) => {
-        const x = pad + i * stepX;
-        const y = pad + (height - pad * 2) * (1 - (v - minV) / (maxV - minV));
-        return `${x},${y}`;
+        const x = pad + i * stepX
+        const y = pad + (height - pad * 2) * (1 - (v - minV) / (maxV - minV))
+        return `${x},${y}`
       })
-      .join(' ');
+      .join(' ')
 
     return (
       <Svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`}>
         {/* baseline grid lines */}
         {[1, 2, 3, 4, 5].map((lvl) => {
-          const y = pad + (height - pad * 2) * (1 - (lvl - minV) / (maxV - minV));
+          const y = pad + (height - pad * 2) * (1 - (lvl - minV) / (maxV - minV))
           return (
             <Line
               key={lvl}
@@ -218,7 +208,7 @@ export const InsightsScreen = ({ navigation }) => {
               stroke={colors.border}
               strokeWidth="1"
             />
-          );
+          )
         })}
         <Polyline
           points={points}
@@ -229,38 +219,38 @@ export const InsightsScreen = ({ navigation }) => {
           strokeLinecap="round"
         />
         {data.map((v, i) => {
-          const x = pad + i * stepX;
-          const y = pad + (height - pad * 2) * (1 - (v - minV) / (maxV - minV));
-          return <Circle key={i} cx={x} cy={y} r="4" fill={colors.primaryDark} />;
+          const x = pad + i * stepX
+          const y = pad + (height - pad * 2) * (1 - (v - minV) / (maxV - minV))
+          return <Circle key={i} cx={x} cy={y} r="4" fill={colors.primaryDark} />
         })}
       </Svg>
-    );
-  };
+    )
+  }
 
   const MoodCycleChart = ({ correlation }) => {
-    const { dayAverages, phaseBands, avgCycleLength } = correlation;
-    const width = 320;
-    const height = 160;
-    const pad = 28;
-    const chartW = width - pad * 2;
-    const chartH = height - pad * 2;
-    const maxV = 5;
-    const minV = 1;
+    const { dayAverages, phaseBands, avgCycleLength } = correlation
+    const width = 320
+    const height = 160
+    const pad = 28
+    const chartW = width - pad * 2
+    const chartH = height - pad * 2
+    const maxV = 5
+    const minV = 1
 
-    const validPoints = dayAverages.filter((d) => d.average !== null);
+    const validPoints = dayAverages.filter((d) => d.average !== null)
     const points = validPoints
       .map((d) => {
-        const x = pad + ((d.day - 1) / (avgCycleLength - 1)) * chartW;
-        const y = pad + chartH * (1 - (d.average - minV) / (maxV - minV));
-        return `${x},${y}`;
+        const x = pad + ((d.day - 1) / (avgCycleLength - 1)) * chartW
+        const y = pad + chartH * (1 - (d.average - minV) / (maxV - minV))
+        return `${x},${y}`
       })
-      .join(' ');
+      .join(' ')
 
     return (
       <Svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`}>
         {phaseBands.map((band) => {
-          const x = pad + ((band.start - 1) / avgCycleLength) * chartW;
-          const w = ((band.end - band.start + 1) / avgCycleLength) * chartW;
+          const x = pad + ((band.start - 1) / avgCycleLength) * chartW
+          const w = ((band.end - band.start + 1) / avgCycleLength) * chartW
           return (
             <Rect
               key={band.phase}
@@ -271,13 +261,21 @@ export const InsightsScreen = ({ navigation }) => {
               fill={PHASE_COLORS[band.phase] || '#F3F0FC'}
               opacity={0.5}
             />
-          );
+          )
         })}
         {[1, 3, 5].map((lvl) => {
-          const y = pad + chartH * (1 - (lvl - minV) / (maxV - minV));
+          const y = pad + chartH * (1 - (lvl - minV) / (maxV - minV))
           return (
-            <Line key={lvl} x1={pad} y1={y} x2={width - pad} y2={y} stroke={colors.border} strokeWidth="0.5" />
-          );
+            <Line
+              key={lvl}
+              x1={pad}
+              y1={y}
+              x2={width - pad}
+              y2={y}
+              stroke={colors.border}
+              strokeWidth="0.5"
+            />
+          )
         })}
         {validPoints.length > 1 && (
           <Polyline
@@ -290,17 +288,17 @@ export const InsightsScreen = ({ navigation }) => {
           />
         )}
         {validPoints.map((d) => {
-          const x = pad + ((d.day - 1) / (avgCycleLength - 1)) * chartW;
-          const y = pad + chartH * (1 - (d.average - minV) / (maxV - minV));
-          return <Circle key={d.day} cx={x} cy={y} r="3" fill={colors.primaryDark} />;
+          const x = pad + ((d.day - 1) / (avgCycleLength - 1)) * chartW
+          const y = pad + chartH * (1 - (d.average - minV) / (maxV - minV))
+          return <Circle key={d.day} cx={x} cy={y} r="3" fill={colors.primaryDark} />
         })}
       </Svg>
-    );
-  };
+    )
+  }
 
   // Horizontal-ish bar chart for symptom frequency.
   const SymptomBarChart = ({ data }) => {
-    const maxCount = Math.max(...data.map((d) => d.count), 1);
+    const maxCount = Math.max(...data.map((d) => d.count), 1)
     return (
       <View style={styles.barChart}>
         {data.map((item) => (
@@ -309,56 +307,41 @@ export const InsightsScreen = ({ navigation }) => {
               {item.label}
             </Text>
             <View style={styles.barTrack}>
-              <View
-                style={[
-                  styles.barFill,
-                  { width: `${(item.count / maxCount) * 100}%` },
-                ]}
-              />
+              <View style={[styles.barFill, { width: `${(item.count / maxCount) * 100}%` }]} />
             </View>
             <Text style={styles.barCount}>{item.count}</Text>
           </View>
         ))}
       </View>
-    );
-  };
+    )
+  }
 
   // Mini cycle-length bar chart.
   const CycleBars = ({ data }) => {
-    const width = 300;
-    const height = 120;
-    const pad = 20;
-    const maxV = Math.max(...data, 35);
-    const barW = data.length ? (width - pad * 2) / data.length - 8 : 0;
+    const width = 300
+    const height = 120
+    const pad = 20
+    const maxV = Math.max(...data, 35)
+    const barW = data.length ? (width - pad * 2) / data.length - 8 : 0
     return (
       <Svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`}>
         {data.map((v, i) => {
-          const h = (height - pad * 2) * (v / maxV);
-          const x = pad + i * ((width - pad * 2) / data.length) + 4;
-          const y = height - pad - h;
+          const h = (height - pad * 2) * (v / maxV)
+          const x = pad + i * ((width - pad * 2) / data.length) + 4
+          const y = height - pad - h
           return (
             <G key={i}>
-              <Rect
-                x={x}
-                y={y}
-                width={barW}
-                height={h}
-                rx="4"
-                fill={colors.primaryDark}
-              />
+              <Rect x={x} y={y} width={barW} height={h} rx="4" fill={colors.primaryDark} />
             </G>
-          );
+          )
         })}
       </Svg>
-    );
-  };
+    )
+  }
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
           {navigation?.canGoBack?.() ? (
@@ -437,19 +420,34 @@ export const InsightsScreen = ({ navigation }) => {
                   <View style={styles.phaseLegend}>
                     {moodCycleCorrelation.phaseBands.map((band) => (
                       <View key={band.phase} style={styles.phaseLegendItem}>
-                        <View style={[styles.phaseLegendDot, { backgroundColor: PHASE_COLORS[band.phase] }]} />
+                        <View
+                          style={[
+                            styles.phaseLegendDot,
+                            { backgroundColor: PHASE_COLORS[band.phase] },
+                          ]}
+                        />
                         <Text style={styles.phaseLegendLabel}>{band.phase}</Text>
                       </View>
                     ))}
                   </View>
                   {moodCycleCorrelation.patterns.map((pattern, idx) => (
                     <View key={idx} style={styles.patternRow}>
-                      <View style={[styles.patternDot, { backgroundColor: pattern.type === 'dip' ? colors.secondaryDark : colors.successDark }]} />
+                      <View
+                        style={[
+                          styles.patternDot,
+                          {
+                            backgroundColor:
+                              pattern.type === 'dip' ? colors.secondaryDark : colors.successDark,
+                          },
+                        ]}
+                      />
                       <Text style={styles.patternText}>{generatePatternSummary(pattern)}</Text>
                     </View>
                   ))}
                   <Text style={styles.caption}>
-                    {t('insights.moodCycleCaption', { count: moodCycleCorrelation.totalMoodsMapped })}
+                    {t('insights.moodCycleCaption', {
+                      count: moodCycleCorrelation.totalMoodsMapped,
+                    })}
                   </Text>
                 </>
               )}
@@ -471,7 +469,9 @@ export const InsightsScreen = ({ navigation }) => {
               <SectionCard
                 icon={<Activity size={20} color={colors.accentDark} />}
                 title={t('insights.symptomPhaseTitle')}
-                subtitle={t('insights.symptomPhaseSubtitle', { cycles: symptomPhaseData.cyclesUsed })}
+                subtitle={t('insights.symptomPhaseSubtitle', {
+                  cycles: symptomPhaseData.cyclesUsed,
+                })}
                 isEmpty={false}
               >
                 {symptomPhaseData.dominantSymptoms.map((item, idx) => (
@@ -501,12 +501,22 @@ export const InsightsScreen = ({ navigation }) => {
               <View style={styles.accuracyList}>
                 {predictionAccuracy.entries.slice(-5).map((entry, idx) => (
                   <View key={idx} style={styles.accuracyRow}>
-                    <View style={[styles.accuracyDot, { backgroundColor: entry.accurate ? colors.successDark : colors.errorDark }]} />
-                    <Text style={styles.accuracyLabel}>
-                      Cycle {entry.cycleIndex}
-                    </Text>
-                    <Text style={[styles.accuracyDelta, { color: entry.accurate ? colors.successDark : colors.errorDark }]}>
-                      {entry.deltaDays === 0 ? 'Exact' : `${entry.deltaDays > 0 ? '+' : ''}${entry.deltaDays}d`}
+                    <View
+                      style={[
+                        styles.accuracyDot,
+                        { backgroundColor: entry.accurate ? colors.successDark : colors.errorDark },
+                      ]}
+                    />
+                    <Text style={styles.accuracyLabel}>Cycle {entry.cycleIndex}</Text>
+                    <Text
+                      style={[
+                        styles.accuracyDelta,
+                        { color: entry.accurate ? colors.successDark : colors.errorDark },
+                      ]}
+                    >
+                      {entry.deltaDays === 0
+                        ? 'Exact'
+                        : `${entry.deltaDays > 0 ? '+' : ''}${entry.deltaDays}d`}
                     </Text>
                   </View>
                 ))}
@@ -545,8 +555,16 @@ export const InsightsScreen = ({ navigation }) => {
             {/* Phase-aware tips */}
             <SectionCard
               icon={<Lightbulb size={20} color={colors.primaryDark} />}
-              title={prediction.currentPhase ? t('insights.phaseAwareTips', { phase: prediction.currentPhase }) : t('insights.wellnessTips')}
-              subtitle={prediction.cycleDay ? t('insights.cycleDay', { day: prediction.cycleDay }) : t('insights.personalizedPhase')}
+              title={
+                prediction.currentPhase
+                  ? t('insights.phaseAwareTips', { phase: prediction.currentPhase })
+                  : t('insights.wellnessTips')
+              }
+              subtitle={
+                prediction.cycleDay
+                  ? t('insights.cycleDay', { day: prediction.cycleDay })
+                  : t('insights.personalizedPhase')
+              }
               isEmpty={false}
             >
               {phaseAwareTips.map((tip, idx) => (
@@ -562,16 +580,14 @@ export const InsightsScreen = ({ navigation }) => {
               <View importantForAccessibility="no">
                 <Droplet size={16} color={colors.primaryDark} />
               </View>
-              <Text style={styles.noteText}>
-                {t('insights.noteText')}
-              </Text>
+              <Text style={styles.noteText}>{t('insights.noteText')}</Text>
             </View>
           </>
         )}
       </ScrollView>
     </SafeAreaView>
-  );
-};
+  )
+}
 
 const createStyles = ({ colors, typography, spacing, borderRadius, shadows }) =>
   StyleSheet.create({
@@ -796,4 +812,4 @@ const createStyles = ({ colors, typography, spacing, borderRadius, shadows }) =>
       ...typography.caption,
       color: colors.textMedium,
     },
-  });
+  })

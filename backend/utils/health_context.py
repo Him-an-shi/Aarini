@@ -7,7 +7,7 @@ it as a structured context string for injection into the Gemini system prompt.
 
 import logging
 import threading
-
+import time
 logger = logging.getLogger(__name__)
 
 _context_cache = {}

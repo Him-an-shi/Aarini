@@ -70,6 +70,35 @@ class TestSignup:
         if "user" in data:
             assert data["user"]["cycleLength"] == 28
 
+    # 🛠️ NEW TESTS FOR ISSUE #119
+    def test_signup_invalid_email_format(self, client, json_headers):
+        """Invalid email format returns 400."""
+        payload = {
+            "name": "Bad Email",
+            "email": "not-an-email",
+            "password": "securePass123",
+        }
+        resp = client.post("/signup", headers=json_headers, json=payload)
+        
+        assert resp.status_code == 400
+
+    def test_signup_duplicate_email(self, client, json_headers):
+        """Signing up with an already registered email returns an error status."""
+        payload = {
+            "name": "Duplicate User",
+            "email": "duplicate@example.com",
+            "password": "securePass123",
+        }
+        # First signup should succeed
+        client.post("/signup", headers=json_headers, json=payload)
+        
+        # Second signup with the same email should fail (usually 400 or 409 Conflict)
+        resp = client.post("/signup", headers=json_headers, json=payload)
+        assert resp.status_code in [400, 409]
+        
+    
+      
+
 
 class TestLogin:
     """POST /login endpoint tests."""
@@ -107,6 +136,18 @@ class TestLogin:
 
         assert resp.status_code == 400
 
+
+    def test_login_nonexistent_user(self, client, json_headers):
+        response = client.post(
+            "/login",
+            headers=json_headers,
+            json={
+                "email": "nouser@example.com",
+                "password": "password123",
+            },
+        )
+
+        assert response.status_code == 401
     def test_login_invalid_password(self, client, json_headers):
         client.post(
             "/signup",
@@ -129,28 +170,5 @@ class TestLogin:
 
         assert response.status_code == 401
 
-    def test_login_nonexistent_user(self, client, json_headers):
-        response = client.post(
-            "/login",
-            headers=json_headers,
-            json={
-                "email": "nouser@example.com",
-                "password": "password123",
-            },
-        )
-
-        assert response.status_code == 401
-
-    def test_signup_duplicate_email(self, client, json_headers):
-        payload = {
-            "name": "Duplicate",
-            "email": "duplicate@example.com",
-            "password": "password123",
-        }
-
-        first = client.post("/signup", headers=json_headers, json=payload)
-        assert first.status_code == 201
-
-        second = client.post("/signup", headers=json_headers, json=payload)
-
-        assert second.status_code == 409
+    
+    

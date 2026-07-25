@@ -4,8 +4,9 @@
 class TestPredictionFeedback:
     """GET /prediction-feedback"""
 
-    def test_feedback_insufficient_data(self, client, auth_headers):
-        resp = client.get("/prediction-feedback", headers=auth_headers)
+    def test_feedback_insufficient_data(self, client):
+        headers = {"Content-Type": "application/json", "X-User-Id": "fresh_user_insufficient"}
+        resp = client.get("/prediction-feedback", headers=headers)
         assert resp.status_code == 200
         data = resp.get_json()
         assert data["hasEnoughData"] is False

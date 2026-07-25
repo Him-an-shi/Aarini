@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { 
   StyleSheet, 
   View, 
@@ -15,10 +15,13 @@ import { Button } from '../components/Button';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../i18n/LanguageContext';
+import { useFormValidation } from '../hooks/useFormValidation';
+import { validateEmail, validatePassword } from '../utils/validators';
 import { Sparkles } from 'lucide-react-native';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 
 export const LoginScreen = ({ navigation }) => {
-  const { login, isLoading, error: authError, sessionExpired } = useAuth();
+  const { login, googleLogin, isLoading, error: authError, sessionExpired } = useAuth();
   const { theme } = useTheme();
   const { t } = useLanguage();
   const { colors, typography } = theme;
@@ -26,53 +29,52 @@ export const LoginScreen = ({ navigation }) => {
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  
-  // Validation state
-  const [emailError, setEmailError] = useState(null);
-  const [passwordError, setPasswordError] = useState(null);
 
-  // Email Validation regex
-  const validateEmail = (text) => {
-    setEmail(text);
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (text.trim() === '') {
-      setEmailError(t('validation.emailRequired'));
-    } else if (!emailRegex.test(text)) {
-      setEmailError(t('validation.emailInvalid'));
-    } else {
-      setEmailError(null);
-    }
-  };
+  useEffect(() => {
+    GoogleSignin.configure({
+      webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || 'dummy_client_id_for_dev', // Configure with actual ID in production
+      offlineAccess: true,
+    });
+  }, []);
 
-  const validatePassword = (text) => {
-    setPassword(text);
-    if (text.trim() === '') {
-      setPasswordError(t('validation.passwordRequired'));
-    } else if (text.length < 6) {
-      setPasswordError(t('validation.passwordTooShort'));
-    } else {
-      setPasswordError(null);
-    }
-  };
+  const { errors, handleChange, handleBlur, validateAll, clearFieldError } = useFormValidation({
+    email: (v) => validateEmail(v),
+    password: (v) => validatePassword(v),
+  });
 
   const handleLogin = async () => {
-    let valid = true;
-    if (!email) {
-      setEmailError(t('validation.emailRequired'));
-      valid = false;
-    }
-    if (!password) {
-      setPasswordError(t('validation.passwordRequired'));
-      valid = false;
-    }
-
-    if (!valid || emailError || passwordError) {
-      return;
-    }
+    const isValid = validateAll({ email, password });
+    if (!isValid) return;
 
     const success = await login(email, password);
     if (!success) {
       Alert.alert(t('login.loginError'), authError || t('login.loginFailed'));
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      await GoogleSignin.hasPlayServices();
+      const userInfo = await GoogleSignin.signIn();
+      const idToken = userInfo.data?.idToken || userInfo.idToken;
+      if (idToken) {
+        const success = await googleLogin(idToken);
+        if (!success) {
+          Alert.alert(t('login.loginError'), authError || t('login.loginFailed'));
+        }
+      } else {
+        Alert.alert(t('login.loginError'), 'Could not get Google token');
+      }
+    } catch (error) {
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        // user cancelled the login flow
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        // operation (e.g. sign in) is in progress already
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        Alert.alert(t('login.loginError'), 'Play services not available or outdated');
+      } else {
+        Alert.alert(t('login.loginError'), error.message || t('login.loginFailed'));
+      }
     }
   };
 
@@ -118,20 +120,22 @@ export const LoginScreen = ({ navigation }) => {
               <InputField
                 label={t('login.emailLabel')}
                 value={email}
-                onChangeText={validateEmail}
+                onChangeText={(text) => { setEmail(text); handleChange('email', text); }}
+                onBlur={() => handleBlur('email', email)}
                 placeholder={t('login.emailPlaceholder')}
                 keyboardType="email-address"
-                error={emailError}
+                error={errors.email}
                 containerStyle={styles.formField}
               />
 
               <InputField
                 label={t('login.passwordLabel')}
                 value={password}
-                onChangeText={validatePassword}
+                onChangeText={(text) => { setPassword(text); handleChange('password', text); }}
+                onBlur={() => handleBlur('password', password)}
                 placeholder={t('login.passwordPlaceholder')}
                 secureTextEntry={true}
-                error={passwordError}
+                error={errors.password}
                 containerStyle={styles.formField}
               />
 
@@ -150,6 +154,13 @@ export const LoginScreen = ({ navigation }) => {
                 onPress={handleLogin}
                 loading={isLoading}
                 style={styles.submitButton}
+              />
+
+              <Button
+                title="Sign in with Google"
+                onPress={handleGoogleLogin}
+                loading={isLoading}
+                style={[styles.submitButton, { marginTop: 12, backgroundColor: '#DB4437', borderColor: '#DB4437' }]}
               />
 
               <View style={styles.demoBanner} importantForAccessibility="no">

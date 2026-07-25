@@ -70,6 +70,32 @@ class TestSignup:
         if "user" in data:
             assert data["user"]["cycleLength"] == 28
 
+    # 🛠️ NEW TESTS FOR ISSUE #119
+    def test_signup_invalid_email_format(self, client, json_headers):
+        """Invalid email format returns 400."""
+        payload = {
+            "name": "Bad Email",
+            "email": "not-an-email",
+            "password": "securePass123",
+        }
+        resp = client.post("/signup", headers=json_headers, json=payload)
+        
+        assert resp.status_code == 400
+
+    def test_signup_duplicate_email(self, client, json_headers):
+        """Signing up with an already registered email returns an error status."""
+        payload = {
+            "name": "Duplicate User",
+            "email": "duplicate@example.com",
+            "password": "securePass123",
+        }
+        # First signup should succeed
+        client.post("/signup", headers=json_headers, json=payload)
+        
+        # Second signup with the same email should fail (usually 400 or 409 Conflict)
+        resp = client.post("/signup", headers=json_headers, json=payload)
+        assert resp.status_code in [400, 409]
+
 
 class TestLogin:
     """POST /login endpoint tests."""
@@ -106,3 +132,19 @@ class TestLogin:
         resp = client.post("/login", headers=json_headers, json={})
 
         assert resp.status_code == 400
+
+    # 🛠️ NEW TESTS FOR ISSUE #119
+    def test_login_invalid_password(self, client, json_headers):
+        """Login with incorrect password returns 401 Unauthorized."""
+        payload = {"email": "priya@example.com", "password": "wrongpassword"}
+        resp = client.post("/login", headers=json_headers, json=payload)
+        
+        # Checking against standard auth denial codes (401 is most common)
+        assert resp.status_code in [400, 401]
+
+    def test_login_unregistered_email(self, client, json_headers):
+        """Login with unregistered email returns 401 or 404."""
+        payload = {"email": "nobody@example.com", "password": "securePass123"}
+        resp = client.post("/login", headers=json_headers, json=payload)
+        
+        assert resp.status_code in [400, 401, 404]

@@ -4,16 +4,22 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { LanguageProvider } from './i18n/LanguageContext';
+import { NetworkProvider } from './context/NetworkContext';
 import { AppNavigator } from './navigation/AppNavigator';
 import { ThemeToggle } from './components/ThemeToggle';
+import { AppLockGate } from './components/AppLockGate';
+import { OfflineBanner } from './components/OfflineBanner';
 
 const AppContent = () => {
   const { isDark } = useTheme();
 
   return (
     <AuthProvider>
-      <AppNavigator />
-      <ThemeToggle />
+      <AppLockGate>
+        <OfflineBanner />
+        <AppNavigator />
+        <ThemeToggle />
+      </AppLockGate>
       <StatusBar style={isDark ? 'light' : 'dark'} />
     </AuthProvider>
   );
@@ -24,7 +30,9 @@ export default function App() {
     <SafeAreaProvider>
       <ThemeProvider>
         <LanguageProvider>
-          <AppContent />
+          <NetworkProvider>
+            <AppContent />
+          </NetworkProvider>
         </LanguageProvider>
       </ThemeProvider>
     </SafeAreaProvider>

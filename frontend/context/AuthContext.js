@@ -224,6 +224,49 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const googleLogin = async (idToken) => {
+    setIsLoading(true);
+    setError(null);
+    setSessionExpired(false);
+    try {
+      const response = await fetch(`${BACKEND_URL}/google-login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
+      });
+
+      const resData = await response.json();
+
+      if (!response.ok) {
+        throw new Error(resData.error || 'Google Authentication failed.');
+      }
+
+      const token = resData.token;
+      const userData = resData.user;
+
+      setUserToken(token);
+      setUser(userData);
+
+      const now = Date.now().toString();
+      await AsyncStorage.setItem('userToken', token);
+      await AsyncStorage.setItem('user', JSON.stringify(userData));
+      await AsyncStorage.setItem('tokenIssuedAt', now);
+      await AsyncStorage.setItem('lastActivity', now);
+
+      // Check onboarding
+      const onboarded = await isOnboardingComplete();
+      setNeedsOnboarding(!onboarded);
+      requestNotificationPermission();
+      return true;
+    } catch (e) {
+      console.warn('Google login error:', e.message);
+      setError(e.message || 'Google login failed.');
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const logout = async () => {
     setIsLoading(true);
     try {
@@ -255,7 +298,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ isLoading, userToken, user, error, sessionExpired, needsOnboarding, login, signup, logout, resetPassword, updateActivity, completeOnboarding }}>
+    <AuthContext.Provider value={{ isLoading, userToken, user, error, sessionExpired, needsOnboarding, login, googleLogin, signup, logout, resetPassword, updateActivity, completeOnboarding, setUser, setUserToken }}>
       {children}
     </AuthContext.Provider>
   );

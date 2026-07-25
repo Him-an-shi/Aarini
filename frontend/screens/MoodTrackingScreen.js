@@ -9,7 +9,9 @@ import {
   TextInput,
 } from 'react-native';
 import Svg, { Polyline, Circle, Line } from 'react-native-svg';
-import { ArrowLeft, Smile, Frown, Meh, ThumbsUp, ThumbsDown, Calendar, TrendingUp } from 'lucide-react-native';
+import { ArrowLeft, Smile, Frown, Meh, ThumbsUp, ThumbsDown, Calendar, TrendingUp, Heart } from 'lucide-react-native';
+import { Card } from '../components/Card';
+import { EmptyState } from '../components/EmptyState';
 import { secureGetItem, secureSetItem } from '../utils/secureStorage';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -185,16 +187,11 @@ export const MoodTrackingScreen = ({ navigation }) => {
         </View>
 
         {/* Today's mood selector */}
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <View style={styles.cardIcon}>
-              <Smile size={20} color={colors.primaryDark} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={typography.h3}>{t('moodTracking.howFeeling')}</Text>
-              <Text style={styles.cardSubtitle}>{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</Text>
-            </View>
-          </View>
+        <Card
+          icon={<Smile size={20} color={colors.primaryDark} />}
+          title={t('moodTracking.howFeeling')}
+          subtitle={new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+        >
           <View style={styles.moodRow}>
             {MOODS.map((mood) => {
               const isSelected = todayMood === mood.key;
@@ -240,19 +237,15 @@ export const MoodTrackingScreen = ({ navigation }) => {
               <Text style={styles.noteInputPlaceholder}>Add a note (select a mood first)</Text>
             </TouchableOpacity>
           )}
-        </View>
+        </Card>
 
         {/* Weekly trend */}
-        <View style={styles.card} accessibilityLabel="7-day mood trend chart">
-          <View style={styles.cardHeader}>
-            <View style={styles.cardIcon}>
-              <TrendingUp size={20} color={colors.primaryDark} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={typography.h3}>{t('moodTracking.trend')}</Text>
-              <Text style={styles.cardSubtitle}>{t('moodTracking.trendSubtitle')}</Text>
-            </View>
-          </View>
+        <Card
+          icon={<TrendingUp size={20} color={colors.primaryDark} />}
+          title={t('moodTracking.trend')}
+          subtitle={t('moodTracking.trendSubtitle')}
+          accessibilityLabel="7-day mood trend chart"
+        >
           {filledSeries.length >= 2 ? (
             <>
               <TrendChart />
@@ -263,23 +256,16 @@ export const MoodTrackingScreen = ({ navigation }) => {
               </View>
             </>
           ) : (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>{t('moodTracking.noTrend')}</Text>
-            </View>
+            <EmptyState compact message={t('moodTracking.noTrend')} />
           )}
-        </View>
+        </Card>
 
         {/* Stats */}
         {stats && (
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <View style={styles.cardIcon}>
-                <Calendar size={20} color={colors.primaryDark} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={typography.h3}>{t('moodTracking.insights')}</Text>
-              </View>
-            </View>
+          <Card
+            icon={<Calendar size={20} color={colors.primaryDark} />}
+            title={t('moodTracking.insights')}
+          >
             <View style={styles.statsRow}>
               <View style={styles.statItem}>
                 <Text style={styles.statValue}>{stats.total}</Text>
@@ -294,12 +280,11 @@ export const MoodTrackingScreen = ({ navigation }) => {
                 <Text style={styles.statLabel}>{t('moodTracking.mostCommon')}</Text>
               </View>
             </View>
-          </View>
+          </Card>
         )}
 
         {/* Recent history */}
-        <View style={styles.card}>
-          <Text style={[typography.h3, { marginBottom: spacing.md }]}>{t('moodTracking.recentEntries')}</Text>
+        <Card title={t('moodTracking.recentEntries')}>
           {Object.entries(entries)
             .sort(([a], [b]) => b.localeCompare(a))
             .slice(0, 7)
@@ -317,9 +302,9 @@ export const MoodTrackingScreen = ({ navigation }) => {
               );
             })}
           {Object.keys(entries).length === 0 && (
-            <Text style={styles.emptyText}>{t('moodTracking.noEntries')}</Text>
+            <EmptyState compact message={t('moodTracking.noEntries')} />
           )}
-        </View>
+        </Card>
       </ScrollView>
     </SafeAreaView>
   );

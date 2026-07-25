@@ -107,3 +107,38 @@ export function computeCycleVariance(lengths) {
   const variance = values.reduce((sum, v) => sum + Math.pow(v - avg, 2), 0) / values.length;
   return Math.round(Math.sqrt(variance) * 10) / 10;
 }
+
+export function computeCycleStability(lengths) {
+  if (lengths.length < 2) return { stability: null, label: 'Needs more data' };
+  const values = lengths.map((l) => l.length);
+  const avg = values.reduce((a, b) => a + b, 0) / values.length;
+  const stdDev = Math.sqrt(values.reduce((sum, v) => sum + Math.pow(v - avg, 2), 0) / values.length);
+  const cv = (stdDev / avg) * 100;
+  if (cv < 8) return { stability: 'very_regular', label: 'Very Regular', cv: Math.round(cv * 10) / 10 };
+  if (cv < 15) return { stability: 'regular', label: 'Regular', cv: Math.round(cv * 10) / 10 };
+  if (cv < 25) return { stability: 'moderate', label: 'Moderately Variable', cv: Math.round(cv * 10) / 10 };
+  return { stability: 'variable', label: 'Highly Variable', cv: Math.round(cv * 10) / 10 };
+}
+
+export function computeSeasonalCycleInsights(cycles) {
+  const sorted = cycles
+    .map((c) => ({ ...c, start: parseLocalDate(c.startDate) }))
+    .filter((c) => c.start)
+    .sort((a, b) => a.start - b.start);
+  if (sorted.length < 4) return null;
+  const byQuarter = { Q1: [], Q2: [], Q3: [], Q4: [] };
+  for (let i = 1; i < sorted.length; i++) {
+    const gap = diffDays(sorted[i].start, sorted[i - 1].start);
+    if (gap < 15 || gap > 60) continue;
+    const month = sorted[i].start.getMonth();
+    const quarter = month < 3 ? 'Q1' : month < 6 ? 'Q2' : month < 9 ? 'Q3' : 'Q4';
+    byQuarter[quarter].push(gap);
+  }
+  const result = {};
+  Object.entries(byQuarter).forEach(([q, vals]) => {
+    if (vals.length >= 2) {
+      result[q] = { avg: Math.round(vals.reduce((a, b) => a + b, 0) / vals.length), count: vals.length };
+    }
+  });
+  return Object.keys(result).length > 0 ? result : null;
+}

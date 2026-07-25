@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { 
   StyleSheet, 
   View, 
@@ -15,6 +15,8 @@ import { Button } from '../components/Button';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../i18n/LanguageContext';
+import { useFormValidation } from '../hooks/useFormValidation';
+import { validateEmail, validatePassword, validateName, validateAge, validateCycleLength, getPasswordStrength } from '../utils/validators';
 import { Heart } from 'lucide-react-native';
 
 export const SignupScreen = ({ navigation }) => {
@@ -24,108 +26,38 @@ export const SignupScreen = ({ navigation }) => {
   const { colors, typography } = theme;
   const styles = useMemo(() => createStyles(theme), [theme]);
   
-  // Step state (1: Account info, 2: Wellness specs)
   const [step, setStep] = useState(1);
-  
-  // Form states
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordStrength, setPasswordStrength] = useState(null);
   const [age, setAge] = useState('');
-  const [cycleLength, setCycleLength] = useState('28'); // Default standard average cycle
-  
-  // Error states
-  const [errors, setErrors] = useState({});
+  const [cycleLength, setCycleLength] = useState('28');
 
-  const getPasswordStrength = (pass) => {
-    if (!pass) return null;
-    if (pass.length < 6) return 'Weak';
-    
-    const onlyDigits = /^\d+$/.test(pass);
-    if (onlyDigits) return 'Weak';
-    
-    const hasUppercase = /[A-Z]/.test(pass);
-    const hasLowercase = /[a-z]/.test(pass);
-    const hasNumberOrSpecial = /[\d\W_]/.test(pass);
-    
-    if (pass.length >= 8 && hasUppercase && hasLowercase && hasNumberOrSpecial) {
-      return 'Strong';
-    }
-    
-    const hasLetters = /[a-zA-Z]/.test(pass);
-    const hasSpecial = /[^a-zA-Z0-9]/.test(pass);
-    
-    if (pass.length >= 6 && hasLetters && !hasSpecial && pass.length < 10) {
-      return 'Medium';
-    }
-    
-    return 'Medium';
-  };
+  const step1Validation = useFormValidation({
+    name: (v) => validateName(v),
+    email: (v) => validateEmail(v),
+    password: (v) => validatePassword(v),
+  });
 
-  // Real-time validators
-  const handleValidateStep1 = () => {
-    const newErrors = {};
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    
-    if (!name.trim()) {
-      newErrors.name = t('validation.nameRequired');
-    }
-    
-    if (!email.trim()) {
-      newErrors.email = t('validation.emailRequired');
-    } else if (!emailRegex.test(email)) {
-      newErrors.email = t('validation.emailInvalid');
-    }
-    
-    if (!password) {
-      newErrors.password = t('validation.passwordRequired');
-    } else if (password.length < 6) {
-      newErrors.password = t('validation.passwordLength');
-    } else if (getPasswordStrength(password) === 'Weak') {
-      newErrors.password = t('validation.passwordWeak');
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  const step2Validation = useFormValidation({
+    age: (v) => validateAge(v),
+    cycleLength: (v) => validateCycleLength(v),
+  });
 
-  const handleValidateStep2 = () => {
-    const newErrors = {};
-    const ageVal = parseInt(age, 10);
-    const cycleVal = parseInt(cycleLength, 10);
-    
-    if (!age.trim()) {
-      newErrors.age = t('validation.ageRequired');
-    } else if (isNaN(ageVal) || ageVal < 10 || ageVal > 90) {
-      newErrors.age = t('validation.ageInvalid');
-    }
-    
-    if (!cycleLength.trim()) {
-      newErrors.cycleLength = t('validation.cycleLengthRequired');
-    } else if (isNaN(cycleVal) || cycleVal < 15 || cycleVal > 60) {
-      newErrors.cycleLength = t('validation.cycleLengthInvalid');
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  const handleNextStep = useCallback(() => {
+    const isValid = step1Validation.validateAll({ name, email, password });
+    if (isValid) setStep(2);
+  }, [name, email, password, step1Validation]);
 
-  const handleNextStep = () => {
-    if (handleValidateStep1()) {
-      setStep(2);
-    }
-  };
-
-  const handlePrevStep = () => {
+  const handlePrevStep = useCallback(() => {
     setStep(1);
-    setErrors({});
-  };
+    step1Validation.clearErrors();
+  }, [step1Validation]);
 
-  const handleRegister = async () => {
-    if (!handleValidateStep2()) {
-      return;
-    }
+  const handleRegister = useCallback(async () => {
+    const isValid = step2Validation.validateAll({ age, cycleLength });
+    if (!isValid) return;
 
     const success = await signup(
       name,
@@ -138,7 +70,7 @@ export const SignupScreen = ({ navigation }) => {
     if (!success) {
       Alert.alert('Signup Failed', authError || 'An error occurred during account creation.');
     }
-  };
+  }, [name, email, password, age, cycleLength, signup, step2Validation, authError]);
 
   return (
     <KeyboardAvoidingView 
@@ -183,25 +115,21 @@ export const SignupScreen = ({ navigation }) => {
                 <InputField
                   label={t('signup.nameLabel')}
                   value={name}
-                  onChangeText={(text) => {
-                    setName(text);
-                    if (errors.name) setErrors({...errors, name: null});
-                  }}
+                  onChangeText={(text) => { setName(text); step1Validation.handleChange('name', text); }}
+                  onBlur={() => step1Validation.handleBlur('name', name)}
                   placeholder="e.g., Sarah Jenkins"
                   autoCapitalize="words"
-                  error={errors.name}
+                  error={step1Validation.errors.name}
                 />
 
                 <InputField
                   label={t('signup.emailLabel')}
                   value={email}
-                  onChangeText={(text) => {
-                    setEmail(text);
-                    if (errors.email) setErrors({...errors, email: null});
-                  }}
+                  onChangeText={(text) => { setEmail(text); step1Validation.handleChange('email', text); }}
+                  onBlur={() => step1Validation.handleBlur('email', email)}
                   placeholder="e.g., sarah@example.com"
                   keyboardType="email-address"
-                  error={errors.email}
+                  error={step1Validation.errors.email}
                 />
 
                 <InputField
@@ -210,11 +138,12 @@ export const SignupScreen = ({ navigation }) => {
                   onChangeText={(text) => {
                     setPassword(text);
                     setPasswordStrength(getPasswordStrength(text));
-                    if (errors.password) setErrors({...errors, password: null});
+                    step1Validation.handleChange('password', text);
                   }}
+                  onBlur={() => step1Validation.handleBlur('password', password)}
                   placeholder="Minimum 6 characters"
                   secureTextEntry={true}
-                  error={errors.password}
+                  error={step1Validation.errors.password}
                 />
 
                 {passwordStrength && (
@@ -265,25 +194,21 @@ export const SignupScreen = ({ navigation }) => {
                 <InputField
                   label="YOUR AGE"
                   value={age}
-                  onChangeText={(text) => {
-                    setAge(text);
-                    if (errors.age) setErrors({...errors, age: null});
-                  }}
+                  onChangeText={(text) => { setAge(text); step2Validation.handleChange('age', text); }}
+                  onBlur={() => step2Validation.handleBlur('age', age)}
                   placeholder="e.g., 23"
                   keyboardType="number-pad"
-                  error={errors.age}
+                  error={step2Validation.errors.age}
                 />
 
                 <InputField
                   label="TYPICAL CYCLE LENGTH (DAYS)"
                   value={cycleLength}
-                  onChangeText={(text) => {
-                    setCycleLength(text);
-                    if (errors.cycleLength) setErrors({...errors, cycleLength: null});
-                  }}
+                  onChangeText={(text) => { setCycleLength(text); step2Validation.handleChange('cycleLength', text); }}
+                  onBlur={() => step2Validation.handleBlur('cycleLength', cycleLength)}
                   placeholder="Average cycle length is 28 days"
                   keyboardType="number-pad"
-                  error={errors.cycleLength}
+                  error={step2Validation.errors.cycleLength}
                 />
                 
                 <Text style={styles.helperText}>

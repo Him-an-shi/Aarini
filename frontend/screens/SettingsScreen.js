@@ -1,16 +1,17 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, SafeAreaView, ScrollView,
-  TouchableOpacity, ActivityIndicator, Alert,
+  TouchableOpacity, ActivityIndicator, Alert, Switch, TextInput,
 } from 'react-native';
-import { ArrowLeft, Download, FileText, Share, Globe, Trash2, Archive, UploadCloud } from 'lucide-react-native';
+import { ArrowLeft, Download, Share, Globe, Trash2, Archive, UploadCloud, Lock } from 'lucide-react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../i18n/LanguageContext';
-import { exportHealthData, shareExportFile } from '../services/exportService';
 import { createBackup, shareBackupFile, restoreFromBackup } from '../services/backupService';
+import { Card } from '../components/Card';
+import { isLockEnabled, setLockEnabled, setPIN, hasPINSet } from '../services/appLockService';
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000';
 
@@ -21,24 +22,20 @@ export const SettingsScreen = ({ navigation }) => {
   const { t, language, setLanguage, supportedLanguages } = useLanguage();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
-  const [exporting, setExporting] = useState(false);
-  const [lastExport, setLastExport] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [backingUp, setBackingUp] = useState(false);
   const [restoring, setRestoring] = useState(false);
+  const [lockEnabled, setLockEnabledState] = useState(false);
+  const [showPinSetup, setShowPinSetup] = useState(false);
+  const [newPin, setNewPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
 
-  const handleExport = async (format) => {
-    setExporting(true);
-    try {
-      const result = await exportHealthData(userToken, user?.uid);
-      setLastExport(result);
-      const filePath = format === 'json' ? result.jsonPath : result.textPath;
-      await shareExportFile(filePath);
-    } catch (err) {
-      Alert.alert(t('common.error'), err.message || t('settings.exportFailed'));
-    } finally {
-      setExporting(false);
-    }
+  useEffect(() => {
+    isLockEnabled().then(setLockEnabledState);
+  }, []);
+
+  const handleExport = () => {
+    navigation.navigate('ExportScreen');
   };
 
   const handleBackup = async () => {
@@ -141,16 +138,11 @@ export const SettingsScreen = ({ navigation }) => {
           <View style={styles.backButton} />
         </View>
 
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <View style={styles.cardIcon}>
-              <Download size={20} color={colors.primaryDark} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={typography.h3}>{t('settings.exportData')}</Text>
-              <Text style={styles.cardSubtitle}>{t('settings.exportSubtitle')}</Text>
-            </View>
-          </View>
+        <Card
+          icon={<Download size={20} color={colors.primaryDark} />}
+          title={t('settings.exportData')}
+          subtitle={t('settings.exportSubtitle')}
+        >
 
           <Text style={styles.infoText}>
             {t('settings.exportInfo')}
@@ -159,34 +151,11 @@ export const SettingsScreen = ({ navigation }) => {
           <View style={styles.buttonRow}>
             <TouchableOpacity
               style={[styles.exportButton, styles.exportButtonPrimary]}
-              onPress={() => handleExport('text')}
-              disabled={exporting}
-              accessibilityLabel={t('settings.readableReport')}
+              onPress={() => navigation.navigate('ExportScreen')}
+              accessibilityLabel={t('settings.exportData')}
             >
-              {exporting ? (
-                <ActivityIndicator size="small" color={colors.textOnPrimary} />
-              ) : (
-                <>
-                  <FileText size={18} color={colors.textOnPrimary} />
-                  <Text style={styles.exportButtonTextPrimary}>{t('settings.readableReport')}</Text>
-                </>
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.exportButton, styles.exportButtonSecondary]}
-              onPress={() => handleExport('json')}
-              disabled={exporting}
-              accessibilityLabel={t('settings.jsonExport')}
-            >
-              {exporting ? (
-                <ActivityIndicator size="small" color={colors.primaryDark} />
-              ) : (
-                <>
-                  <Share size={18} color={colors.primaryDark} />
-                  <Text style={styles.exportButtonTextSecondary}>{t('settings.jsonExport')}</Text>
-                </>
-              )}
+              <Download size={18} color={colors.textOnPrimary} />
+              <Text style={styles.exportButtonTextPrimary}>{t('settings.readableReport')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -195,18 +164,13 @@ export const SettingsScreen = ({ navigation }) => {
               {t('settings.exportSuccess', { count: lastExport.recordCount })}
             </Text>
           )}
-        </View>
+        </Card>
 
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <View style={styles.cardIcon}>
-              <Globe size={20} color={colors.primaryDark} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={typography.h3}>{t('settings.language')}</Text>
-              <Text style={styles.cardSubtitle}>{t('settings.languageSubtitle')}</Text>
-            </View>
-          </View>
+        <Card
+          icon={<Globe size={20} color={colors.primaryDark} />}
+          title={t('settings.language')}
+          subtitle={t('settings.languageSubtitle')}
+        >
 
           <View style={styles.languageOptions}>
             {supportedLanguages.map((lang) => (
@@ -224,18 +188,96 @@ export const SettingsScreen = ({ navigation }) => {
               </TouchableOpacity>
             ))}
           </View>
-        </View>
+        </Card>
 
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <View style={styles.cardIcon}>
-              <Archive size={20} color={colors.primaryDark} />
+              <Lock size={20} color={colors.primaryDark} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={typography.h3}>{t('settings.backup')}</Text>
-              <Text style={styles.cardSubtitle}>{t('settings.backupSubtitle')}</Text>
+              <Text style={typography.h3}>{t('appLock.settingsTitle')}</Text>
+              <Text style={styles.cardSubtitle}>{t('appLock.settingsDesc')}</Text>
             </View>
+            <Switch
+              value={lockEnabled}
+              onValueChange={async (val) => {
+                if (val) {
+                  const hasPin = await hasPINSet();
+                  if (!hasPin) {
+                    setShowPinSetup(true);
+                    return;
+                  }
+                }
+                await setLockEnabled(val);
+                setLockEnabledState(val);
+              }}
+              trackColor={{ false: colors.border, true: colors.primary }}
+            />
           </View>
+
+          {showPinSetup && (
+            <View style={{ marginTop: 12, gap: 8 }}>
+              <TextInput
+                style={[styles.pinInput, { borderColor: colors.border, color: colors.text }]}
+                placeholder={t('appLock.newPin')}
+                placeholderTextColor={colors.textLight}
+                keyboardType="number-pad"
+                maxLength={4}
+                secureTextEntry
+                value={newPin}
+                onChangeText={(v) => setNewPin(v.replace(/[^0-9]/g, ''))}
+              />
+              <TextInput
+                style={[styles.pinInput, { borderColor: colors.border, color: colors.text }]}
+                placeholder={t('appLock.confirmPin')}
+                placeholderTextColor={colors.textLight}
+                keyboardType="number-pad"
+                maxLength={4}
+                secureTextEntry
+                value={confirmPin}
+                onChangeText={(v) => setConfirmPin(v.replace(/[^0-9]/g, ''))}
+              />
+              <TouchableOpacity
+                style={[styles.exportButton, styles.exportButtonPrimary, { marginTop: 4 }]}
+                onPress={async () => {
+                  if (newPin.length !== 4) {
+                    Alert.alert(t('common.error'), t('appLock.pinRequired'));
+                    return;
+                  }
+                  if (newPin !== confirmPin) {
+                    Alert.alert(t('common.error'), t('appLock.pinMismatch'));
+                    return;
+                  }
+                  await setPIN(newPin);
+                  await setLockEnabled(true);
+                  setLockEnabledState(true);
+                  setShowPinSetup(false);
+                  setNewPin('');
+                  setConfirmPin('');
+                  Alert.alert(t('common.success'), t('appLock.pinSet'));
+                }}
+              >
+                <Text style={styles.exportButtonTextPrimary}>{t('appLock.setPin')}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {lockEnabled && !showPinSetup && (
+            <TouchableOpacity
+              style={[styles.exportButton, styles.exportButtonSecondary, { marginTop: 12 }]}
+              onPress={() => setShowPinSetup(true)}
+            >
+              <Text style={styles.exportButtonTextSecondary}>{t('appLock.changePin')}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <Card
+          icon={<Archive size={20} color={colors.primaryDark} />}
+          title={t('settings.backup')}
+          subtitle={t('settings.backupSubtitle')}
+        >
 
           <Text style={styles.infoText}>
             {t('settings.backupInfo')}
@@ -274,18 +316,14 @@ export const SettingsScreen = ({ navigation }) => {
               )}
             </TouchableOpacity>
           </View>
-        </View>
+        </Card>
 
-        <View style={[styles.card, styles.dangerCard]}>
-          <View style={styles.cardHeader}>
-            <View style={[styles.cardIcon, styles.dangerIcon]}>
-              <Trash2 size={20} color={colors.error || '#DC2626'} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={typography.h3}>{t('settings.deleteAccount')}</Text>
-              <Text style={styles.cardSubtitle}>{t('settings.deleteWarning')}</Text>
-            </View>
-          </View>
+        <Card
+          variant="danger"
+          icon={<Trash2 size={20} color={colors.error || '#DC2626'} />}
+          title={t('settings.deleteAccount')}
+          subtitle={t('settings.deleteWarning')}
+        >
 
           <Text style={styles.infoText}>
             This will permanently delete your profile, cycle history, symptom logs, mood entries,
@@ -307,7 +345,7 @@ export const SettingsScreen = ({ navigation }) => {
               </>
             )}
           </TouchableOpacity>
-        </View>
+        </Card>
       </ScrollView>
     </SafeAreaView>
   );
@@ -341,4 +379,5 @@ const createStyles = ({ colors, typography, spacing, borderRadius, shadows }) =>
     dangerIcon: { backgroundColor: (colors.error || '#DC2626') + '15' },
     deleteButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingVertical: 14, borderRadius: borderRadius.md, backgroundColor: colors.error || '#DC2626' },
     deleteButtonText: { ...typography.buttonText, color: '#FFFFFF' },
+    pinInput: { borderWidth: 1, borderRadius: borderRadius.md, paddingHorizontal: 14, paddingVertical: 10, fontSize: 16, letterSpacing: 8, textAlign: 'center' },
   });

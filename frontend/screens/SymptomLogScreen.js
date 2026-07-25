@@ -8,9 +8,12 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
-import { ArrowLeft, Plus, Check } from 'lucide-react-native';
+import { ArrowLeft, Plus, Check, Activity } from 'lucide-react-native';
+import { Card } from '../components/Card';
+import { EmptyState } from '../components/EmptyState';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useFormValidation } from '../hooks/useFormValidation';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000';
 
@@ -38,7 +41,10 @@ export const SymptomLogScreen = ({ navigation }) => {
   const [saving, setSaving] = useState(false);
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [errors, setErrors] = useState({});
+  const formValidation = useFormValidation({
+    symptom: (v) => !v ? 'Please select a symptom.' : null,
+    severity: (v) => !v ? 'Please select a severity level.' : null,
+  });
 
   // Form is valid only when a symptom and a valid severity are both chosen
   const isFormValid = Boolean(selected && severity && VALID_SEVERITIES.has(severity));
@@ -67,19 +73,8 @@ export const SymptomLogScreen = ({ navigation }) => {
   useEffect(() => { loadHistory(); }, [loadHistory]);
 
   const submit = async () => {
-    // Client-side validation before hitting the API
-    const newErrors = {};
-    if (!selected) newErrors.symptom = 'Please select a symptom.';
-    if (!severity) {
-      newErrors.severity = 'Please select a severity level.';
-    } else if (!VALID_SEVERITIES.has(severity)) {
-      newErrors.severity = 'Severity must be mild, moderate, or severe.';
-    }
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-    setErrors({});
+    const isValid = formValidation.validateAll({ symptom: selected, severity });
+    if (!isValid) return;
     setSaving(true);
     try {
       await fetch(`${BACKEND_URL}/add-symptom`, {
@@ -119,11 +114,10 @@ export const SymptomLogScreen = ({ navigation }) => {
         </View>
 
         {/* Symptom selector */}
-        <View style={styles.card}>
-          <Text style={typography.h3}>What are you experiencing?</Text>
-          <Text style={styles.subtitle}>
-            {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
-          </Text>
+        <Card
+          title="What are you experiencing?"
+          subtitle={new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+        >
           <View style={styles.chipGrid}>
             {SYMPTOMS.map((s) => {
               const isActive = selected === s;
@@ -143,15 +137,14 @@ export const SymptomLogScreen = ({ navigation }) => {
               );
             })}
           </View>
-          {errors.symptom ? (
+            {errors.symptom ? (
             <Text style={styles.errorText} accessibilityRole="alert">{errors.symptom}</Text>
           ) : null}
-        </View>
+        </Card>
 
         {/* Severity */}
         {selected && (
-          <View style={styles.card}>
-            <Text style={typography.h3}>Severity</Text>
+          <Card title="Severity">
             <View style={styles.severityRow}>
               {SEVERITIES.map((s) => {
                 const isActive = severity === s;
@@ -201,16 +194,19 @@ export const SymptomLogScreen = ({ navigation }) => {
                 </>
               )}
             </TouchableOpacity>
-          </View>
+          </Card>
         )}
 
         {/* History */}
-        <View style={styles.card}>
-          <Text style={[typography.h3, { marginBottom: spacing.md }]}>Recent Symptoms</Text>
+        <Card title="Recent Symptoms">
           {loading ? (
             <ActivityIndicator color={colors.primaryDark} />
           ) : history.length === 0 ? (
-            <Text style={styles.emptyText}>No symptoms logged yet. Select one above to start tracking.</Text>
+            <EmptyState
+              compact
+              icon={<Activity size={24} color={colors.textLight} />}
+              message="No symptoms logged yet. Select one above to start tracking."
+            />
           ) : (
             history.map((entry, i) => (
               <View key={`${entry.date}-${entry.type}-${i}`} style={styles.historyRow}>
@@ -222,7 +218,7 @@ export const SymptomLogScreen = ({ navigation }) => {
               </View>
             ))
           )}
-        </View>
+        </Card>
       </ScrollView>
     </SafeAreaView>
   );

@@ -73,6 +73,26 @@ class TestAddCycle:
         data = resp.get_json()
         assert "prediction" in data
 
+    # 🛠️ NEW TESTS FOR ISSUE #116
+    def test_add_cycle_future_date(self, client, auth_headers):
+        """Future startDate returns 400."""
+        payload = {
+            "startDate": "2099-01-01", 
+            "endDate": "2099-01-05"
+        }
+        resp = client.post("/add-cycle", headers=auth_headers, json=payload)
+        assert resp.status_code == 400
+
+    def test_add_cycle_invalid_flow_intensity(self, client, auth_headers):
+        """Invalid flowIntensity enum returns 400."""
+        payload = {
+            "startDate": "2026-06-01",
+            "endDate": "2026-06-05",
+            "flowIntensity": "Super Heavy"
+        }
+        resp = client.post("/add-cycle", headers=auth_headers, json=payload)
+        assert resp.status_code == 400
+
 
 class TestGetCycles:
     """GET /cycles endpoint tests."""
@@ -95,6 +115,66 @@ class TestGetCycles:
         assert resp.status_code == 200
 
 
+class TestGetSingleCycle:
+    """GET /cycles/<id> endpoint tests."""
+
+    def test_get_single_cycle_success(self, client, auth_headers):
+        """Existing cycle returns 200 with cycle data."""
+        add = client.post("/add-cycle", headers=auth_headers, json={"startDate": "2026-06-01", "endDate": "2026-06-05"})
+        assert add.status_code == 201
+        cycle_id = add.get_json()["cycle"]["id"]
+
+        resp = client.get(f"/cycles/{cycle_id}", headers=auth_headers)
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["cycle"]["id"] == cycle_id
+        assert data["cycle"]["startDate"] == "2026-06-01"
+
+    def test_get_single_cycle_not_found(self, client, auth_headers):
+        """Non-existent cycle ID returns 404."""
+        resp = client.get("/cycles/nonexistent_id", headers=auth_headers)
+        assert resp.status_code == 404
+
+
+class TestUpdateCycle:
+    """PUT /cycles/<id> endpoint tests."""
+
+    def test_update_cycle_success(self, client, auth_headers):
+        """Update cycle dates returns 200."""
+        add = client.post("/add-cycle", headers=auth_headers, json={"startDate": "2026-06-01", "endDate": "2026-06-05"})
+        cycle_id = add.get_json()["cycle"]["id"]
+
+        resp = client.put(f"/cycles/{cycle_id}", headers=auth_headers, json={"startDate": "2026-06-02", "endDate": "2026-06-06"})
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert "updated" in data["message"]
+
+    def test_update_cycle_not_found(self, client, auth_headers):
+        """Non-existent cycle returns 404."""
+        resp = client.put("/cycles/bad_id", headers=auth_headers, json={"startDate": "2026-06-01", "endDate": "2026-06-05"})
+        assert resp.status_code == 404
+
+
+class TestDeleteCycle:
+    """DELETE /cycles/<id> endpoint tests."""
+
+    def test_delete_cycle_success(self, client, auth_headers):
+        """Existing cycle returns 200 after delete."""
+        add = client.post("/add-cycle", headers=auth_headers, json={"startDate": "2026-06-01", "endDate": "2026-06-05"})
+        cycle_id = add.get_json()["cycle"]["id"]
+
+        resp = client.delete(f"/cycles/{cycle_id}", headers=auth_headers)
+        assert resp.status_code == 200
+
+        get_resp = client.get(f"/cycles/{cycle_id}", headers=auth_headers)
+        assert get_resp.status_code == 404
+
+    def test_delete_cycle_not_found(self, client, auth_headers):
+        """Non-existent cycle returns 404."""
+        resp = client.delete("/cycles/bad_id", headers=auth_headers)
+        assert resp.status_code == 404
+
+
 class TestCyclePrediction:
     """GET /cycle-prediction endpoint tests."""
 
@@ -105,3 +185,34 @@ class TestCyclePrediction:
         assert resp.status_code == 200
         data = resp.get_json()
         assert isinstance(data, dict)
+
+
+class TestUpdateCycle:
+    """PUT /cycles/<id> endpoint tests."""
+
+    def test_update_cycle_not_found(self, client, auth_headers):
+        """Updating a non-existent cycle returns 404."""
+        resp = client.put("/cycles/nonexistent_id", headers=auth_headers, json={"startDate": "2026-07-01"})
+        assert resp.status_code == 404
+
+    def test_update_cycle_invalid_dates(self, client, auth_headers):
+        """Updating with invalid date range returns 400."""
+        resp = client.put("/cycles/some_id", headers=auth_headers, json={
+            "startDate": "2026-07-10",
+            "endDate": "2026-07-05",
+        })
+        assert resp.status_code == 400 or resp.status_code == 404
+
+
+class TestDeleteCycle:
+    """DELETE /cycles/<id> endpoint tests."""
+
+    def test_delete_cycle_not_found(self, client, auth_headers):
+        """Deleting a non-existent cycle returns 404."""
+        resp = client.delete("/cycles/nonexistent_id", headers=auth_headers)
+        assert resp.status_code == 404
+
+    def test_delete_cycle_no_auth(self, client):
+        """Deleting without auth returns 401."""
+        resp = client.delete("/cycles/some_id")
+        assert resp.status_code == 401

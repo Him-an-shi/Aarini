@@ -1,12 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const PENDING_KEY = '@aarini_pending_sync';
+const SYNC_QUEUE_KEY = '@aarini_sync_queue';
+const MAX_RETRY_COUNT = 3;
 
-/**
- * Merge local and remote cycle arrays, deduplicating by startDate.
- * Remote entries take precedence for matching dates (they're the source of truth
- * if the backend accepted them). Local-only entries are preserved and flagged for upload.
- */
 export function mergeCycles(local, remote) {
   const remoteMap = new Map();
   for (const cycle of remote) {
@@ -25,10 +22,6 @@ export function mergeCycles(local, remote) {
   return { merged, localOnly };
 }
 
-/**
- * Push local-only entries to the backend.
- * Returns the list of entries that failed to sync (for retry later).
- */
 export async function pushPendingToBackend(entries, backendUrl, headers) {
   const failed = [];
 
@@ -54,9 +47,6 @@ export async function pushPendingToBackend(entries, backendUrl, headers) {
   return failed;
 }
 
-/**
- * Save entries that couldn't be synced for retry on next app launch.
- */
 export async function savePendingEntries(entries) {
   if (entries.length === 0) {
     await AsyncStorage.removeItem(PENDING_KEY);
@@ -65,9 +55,6 @@ export async function savePendingEntries(entries) {
   await AsyncStorage.setItem(PENDING_KEY, JSON.stringify(entries));
 }
 
-/**
- * Load any previously failed sync entries.
- */
 export async function loadPendingEntries() {
   try {
     const raw = await AsyncStorage.getItem(PENDING_KEY);
@@ -77,15 +64,60 @@ export async function loadPendingEntries() {
   }
 }
 
-/**
- * Full sync flow:
- * 1. Load local cycles + pending entries
- * 2. Fetch remote cycles
- * 3. Merge (deduplicate by startDate)
- * 4. Push local-only entries to backend
- * 5. Save any failures for retry
- * 6. Return final merged array + sync status
- */
+export async function addToSyncQueue(entry) {
+  const queue = await getSyncQueue();
+  queue.push({ ...entry, queuedAt: Date.now(), retryCount: 0 });
+  await AsyncStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(queue));
+}
+
+export async function getSyncQueue() {
+  try {
+    const raw = await AsyncStorage.getItem(SYNC_QUEUE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function clearSyncQueue() {
+  await AsyncStorage.removeItem(SYNC_QUEUE_KEY);
+}
+
+export async function processSyncQueue(backendUrl, headers) {
+  const queue = await getSyncQueue();
+  if (queue.length === 0) return { processed: 0, failed: 0 };
+
+  const stillPending = [];
+  let processed = 0;
+
+  for (const item of queue) {
+    if (item.retryCount >= MAX_RETRY_COUNT) continue;
+    try {
+      const res = await fetch(`${backendUrl}/add-cycle`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(item.payload || item),
+      });
+      if (res.ok) {
+        processed++;
+      } else {
+        stillPending.push({ ...item, retryCount: item.retryCount + 1 });
+      }
+    } catch {
+      stillPending.push({ ...item, retryCount: item.retryCount + 1 });
+    }
+  }
+
+  await AsyncStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(stillPending));
+  return { processed, failed: stillPending.length };
+}
+
+export async function getPendingSyncCount() {
+  const queue = await getSyncQueue();
+  const pending = await loadPendingEntries();
+  return queue.length + pending.length;
+}
+
 export async function syncCycles({ storageKey, backendUrl, headers }) {
   const localRaw = await AsyncStorage.getItem(storageKey);
   const local = localRaw ? JSON.parse(localRaw) : [];

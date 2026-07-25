@@ -8,6 +8,8 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { SkeletonCard } from '../components/SkeletonCard';
+import { Card } from '../components/Card';
+import { EmptyState } from '../components/EmptyState';
 import Svg, { Rect, Polyline, Circle, Line, G } from 'react-native-svg';
 import { ArrowLeft, TrendingUp, Smile, Droplet, Activity, Target, Lightbulb, Heart } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
@@ -19,8 +21,10 @@ import {
   computePredictionAccuracy,
   computeSymptomFrequency,
   computeCycleVariance,
+  computeCycleStability,
   getPhaseAwareTips,
 } from '../utils/analyticsEngine';
+import { calculateCycleQualityScore, analyzeCycleRegularity, analyzeMoodTrendByPhase } from '../utils/patternAnalyzer';
 import {
   computeSymptomPhaseCorrelation,
   generateSymptomPhaseSummary,
@@ -127,6 +131,21 @@ export const InsightsScreen = ({ navigation }) => {
     [cycles]
   );
 
+  const cycleQuality = useMemo(
+    () => calculateCycleQualityScore(cycles, symptoms, moodEntries),
+    [cycles, symptoms, moodEntries]
+  );
+
+  const cycleStability = useMemo(
+    () => computeCycleStability(cycleLengths),
+    [cycleLengths]
+  );
+
+  const phaseMoodAnalysis = useMemo(
+    () => analyzeMoodTrendByPhase(moodEntries, cycles),
+    [moodEntries, cycles]
+  );
+
   const prediction = useMemo(
     () => predictCycleLocally(cycles),
     [cycles]
@@ -159,22 +178,13 @@ export const InsightsScreen = ({ navigation }) => {
   // ---- Sub-components -----------------------------------------------------
 
   const SectionCard = ({ icon, title, subtitle, children, isEmpty, emptyText }) => (
-    <View style={styles.card} accessibilityLabel={title}>
-      <View style={styles.cardHeader}>
-        <View style={styles.cardIcon} importantForAccessibility="no">{icon}</View>
-        <View style={styles.flex}>
-          <Text style={[typography.h3, styles.cardTitle]}>{title}</Text>
-          {subtitle ? <Text style={styles.cardSubtitle}>{subtitle}</Text> : null}
-        </View>
-      </View>
+    <Card icon={icon} title={title} subtitle={subtitle}>
       {isEmpty ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>{emptyText}</Text>
-        </View>
+        <EmptyState compact message={emptyText} />
       ) : (
         children
       )}
-    </View>
+    </Card>
   );
 
   // Simple SVG line chart for the mood trend (values 1–5).
@@ -508,6 +518,30 @@ export const InsightsScreen = ({ navigation }) => {
               )}
             </SectionCard>
 
+            {/* Cycle Quality Score */}
+            {cycleQuality && (
+              <SectionCard
+                icon={<Target size={20} color={colors.primaryDark} />}
+                title={`Wellness Score: ${cycleQuality.score}/100`}
+                subtitle={cycleQuality.interpretation}
+              >
+                <View style={styles.qualityRow}>
+                  <View style={styles.qualityItem}>
+                    <Text style={styles.qualityValue}>{cycleQuality.regularity}</Text>
+                    <Text style={styles.qualityLabel}>Regularity</Text>
+                  </View>
+                  <View style={styles.qualityItem}>
+                    <Text style={styles.qualityValue}>{cycleQuality.dataCompleteness}%</Text>
+                    <Text style={styles.qualityLabel}>Data completeness</Text>
+                  </View>
+                  <View style={styles.qualityItem}>
+                    <Text style={styles.qualityValue}>{cycleQuality.cycleCount}</Text>
+                    <Text style={styles.qualityLabel}>Cycles tracked</Text>
+                  </View>
+                </View>
+              </SectionCard>
+            )}
+
             {/* Phase-aware tips */}
             <SectionCard
               icon={<Lightbulb size={20} color={colors.primaryDark} />}
@@ -744,5 +778,22 @@ const createStyles = ({ colors, typography, spacing, borderRadius, shadows }) =>
       color: colors.textMedium,
       flex: 1,
       lineHeight: 18,
+    },
+    qualityRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      paddingVertical: spacing.sm,
+    },
+    qualityItem: {
+      alignItems: 'center',
+    },
+    qualityValue: {
+      ...typography.h3,
+      color: colors.primaryDark,
+      marginBottom: 2,
+    },
+    qualityLabel: {
+      ...typography.caption,
+      color: colors.textMedium,
     },
   });

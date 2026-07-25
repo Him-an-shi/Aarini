@@ -4,6 +4,8 @@ import {
   Switch, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { SkeletonCard } from '../components/SkeletonCard';
+import { SyncStatusBar } from '../components/SyncStatusBar';
+import { EmptyState } from '../components/EmptyState';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   Bell, CalendarDays, ChevronLeft, ChevronRight, Droplets, LogOut, Plus, Settings, Sparkles,
@@ -12,6 +14,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../i18n/LanguageContext';
+import { useNetwork } from '../context/NetworkContext';
 import {
   dateInRange, parseLocalDate, predictCycleLocally, toDateKey,
 } from '../utils/cyclePrediction';
@@ -20,6 +23,8 @@ import {
 } from '../services/notificationScheduler';
 import { syncCycles } from '../services/syncService';
 import { CyclePhaseBadge } from '../components/CyclePhaseBadge';
+import { HealthAlertCard } from '../components/HealthAlertCard';
+import { detectAnomalies, dismissAlert } from '../services/anomalyDetectionService';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000';
 
@@ -36,7 +41,9 @@ export const CycleTrackerScreen = () => {
   const { user, userToken, logout } = useAuth();
   const { theme } = useTheme();
   const { t } = useLanguage();
+  const { isOnline } = useNetwork();
   const navigation = useNavigation();
+  const [expandedCycleId, setExpandedCycleId] = useState(null);
   const { colors, typography, spacing } = theme;
   const styles = useMemo(() => createStyles(theme), [theme]);
   const storageKey = `cycles:${user?.uid || 'local'}`;
@@ -51,6 +58,7 @@ export const CycleTrackerScreen = () => {
   const [month, setMonth] = useState(new Date());
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [syncStatus, setSyncStatus] = useState('synced');
+  const [healthAlerts, setHealthAlerts] = useState([]);
 
   const headers = useMemo(() => ({
     'Content-Type': 'application/json',
@@ -89,10 +97,23 @@ export const CycleTrackerScreen = () => {
   }, [loadCycles]);
 
   useEffect(() => {
+    if (isOnline && syncStatus !== 'synced') {
+      loadCycles();
+    }
+  }, [isOnline]);
+
+  useEffect(() => {
     if (notificationsEnabled && prediction?.nextPeriodStart) {
       scheduleAllNotifications(prediction);
     }
   }, [notificationsEnabled, prediction]);
+
+  useEffect(() => {
+    if (!loading && cycles.length > 0) {
+      detectAnomalies({ cycles, prediction, moodEntries: [], medications: [], symptoms: [] })
+        .then(setHealthAlerts);
+    }
+  }, [cycles, prediction, loading]);
 
   const saveCycle = async () => {
     const start = parseLocalDate(startDate);
@@ -159,6 +180,22 @@ export const CycleTrackerScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+
+        {healthAlerts.length > 0 && (
+          <View style={{ marginBottom: 8 }}>
+            {healthAlerts.map((alert) => (
+              <HealthAlertCard
+                key={alert.id}
+                alert={alert}
+                onDismiss={async (id) => {
+                  await dismissAlert(id);
+                  setHealthAlerts((prev) => prev.filter((a) => a.id !== id));
+                }}
+              />
+            ))}
+          </View>
+        )}
+
         <View style={styles.header}>
           <View>
             <Text style={styles.eyebrow}>MY CYCLE</Text>
@@ -169,14 +206,7 @@ export const CycleTrackerScreen = () => {
           </TouchableOpacity>
         </View>
 
-        {syncStatus !== 'synced' && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.sm, paddingHorizontal: spacing.xs }} accessibilityLiveRegion="polite">
-            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: syncStatus === 'offline' ? colors.errorDark : syncStatus === 'pending' ? colors.accentDark : colors.primaryDark }} importantForAccessibility="no" />
-            <Text style={{ fontSize: 12, color: colors.textLight }}>
-              {syncStatus === 'offline' ? 'Offline - changes saved locally' : syncStatus === 'pending' ? 'Some entries pending sync' : 'Syncing...'}
-            </Text>
-          </View>
-        )}
+        <SyncStatusBar status={syncStatus} />
 
         {loading ? (
           <View style={{ paddingTop: spacing.sm }}>
@@ -184,15 +214,17 @@ export const CycleTrackerScreen = () => {
             <SkeletonCard height={140} lines={3} />
           </View>
         ) : !prediction?.hasHistory ? (
-          <View style={styles.heroCard}>
-            <Droplets size={30} color={colors.secondaryDark} />
-            <Text style={[typography.h2, styles.center]}>Start with your latest period</Text>
-            <Text style={[styles.muted, styles.center]}>Log start and end dates to unlock phase and period predictions.</Text>
-            <TouchableOpacity style={styles.primaryButton} onPress={() => setModalVisible(true)} accessibilityRole="button" accessibilityLabel="Log period">
-              <Plus size={18} color={colors.white} />
-              <Text style={styles.primaryButtonText}>{t('cycleTracker.logPeriod')}</Text>
-            </TouchableOpacity>
-          </View>
+          <EmptyState
+            icon={<Droplets size={30} color={colors.secondaryDark} />}
+            title="Start with your latest period"
+            message="Log start and end dates to unlock phase and period predictions."
+            action={
+              <TouchableOpacity style={styles.primaryButton} onPress={() => setModalVisible(true)} accessibilityRole="button" accessibilityLabel="Log period">
+                <Plus size={18} color={colors.white} />
+                <Text style={styles.primaryButtonText}>{t('cycleTracker.logPeriod')}</Text>
+              </TouchableOpacity>
+            }
+          />
         ) : (
           <>
             <View style={styles.phaseCard}>
@@ -264,6 +296,43 @@ export const CycleTrackerScreen = () => {
             <Text style={styles.ovulationLegend}>● Ovulation</Text>
           </View>
         </View>
+
+        {cycles.length > 0 && (
+          <>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitle}>
+                <Droplets size={20} color={colors.primaryDark} />
+                <Text style={typography.h2}>Cycle History</Text>
+              </View>
+            </View>
+            {cycles.slice(0, 6).map((c) => (
+              <TouchableOpacity
+                key={c.id}
+                style={styles.cycleRow}
+                onPress={() => navigation.navigate('CycleDetail', { cycle: c })}
+                onLongPress={() => {
+                  setExpandedCycleId(expandedCycleId === c.id ? null : c.id);
+                }}
+              >
+                <View style={styles.cycleRowInfo}>
+                  <Text style={styles.cycleRowDates}>{c.startDate} — {c.endDate}</Text>
+                  <Text style={styles.cycleRowMeta}>
+                    {(Math.ceil((new Date(c.endDate) - new Date(c.startDate)) / 86400000)) + 1}d
+                    {c.flowIntensity ? ` · ${c.flowIntensity}` : ''}
+                  </Text>
+                </View>
+                {expandedCycleId === c.id && (
+                  <TouchableOpacity
+                    style={styles.cycleRowAction}
+                    onPress={() => navigation.navigate('CycleDetail', { cycle: c })}
+                  >
+                    <Text style={styles.cycleRowActionText}>Edit</Text>
+                  </TouchableOpacity>
+                )}
+              </TouchableOpacity>
+            ))}
+          </>
+        )}
 
         <View style={styles.notificationCard}>
           <View style={styles.bell} importantForAccessibility="no"><Bell size={19} color={colors.primaryDark} /></View>
@@ -357,6 +426,12 @@ const createStyles = ({ colors, typography, spacing, borderRadius, shadows }) =>
   loggedLegend: { ...typography.caption, color: colors.primaryDark },
   predictedLegend: { ...typography.caption, color: colors.secondaryDark },
   ovulationLegend: { ...typography.caption, color: colors.accentDark },
+  cycleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.cardBackground, borderRadius: borderRadius.md, padding: spacing.md, marginBottom: spacing.sm, ...shadows.light },
+  cycleRowInfo: { flex: 1 },
+  cycleRowDates: { ...typography.bodyMedium, color: colors.textDark, fontWeight: '600' },
+  cycleRowMeta: { ...typography.caption, color: colors.textLight, marginTop: 2 },
+  cycleRowAction: { padding: spacing.sm, backgroundColor: colors.primary, borderRadius: borderRadius.sm },
+  cycleRowActionText: { ...typography.caption, color: colors.primaryDark, fontWeight: '800' },
   notificationCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.cardBackground, borderRadius: borderRadius.md, padding: spacing.md },
   bell: { width: 38, height: 38, borderRadius: 19, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
   notificationTitle: { ...typography.bodyMedium, color: colors.textDark, fontWeight: '800', marginBottom: 2 },

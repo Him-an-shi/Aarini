@@ -55,7 +55,31 @@ class TestAddSymptom:
         resp = client.post("/add-symptom", headers=json_headers, json=payload)
 
         assert resp.status_code == 201
+    def test_add_symptom_future_date(self, client, json_headers):
+        """Future symptom date returns 400."""
+        payload = {
+            "uid": "test_user_001",
+            "type": "Cramps",
+            "severity": "High",
+            "date": "2099-01-01",
+        }
 
+        resp = client.post("/add-symptom", headers=json_headers, json=payload)
+
+        assert resp.status_code == 400
+
+    def test_add_symptom_invalid_severity(self, client, json_headers):
+        """Invalid severity value returns 400."""
+        payload = {
+            "uid": "test_user_001",
+            "type": "Cramps",
+            "severity": "Super Extreme",
+            "date": "2026-06-15",
+        }
+
+        resp = client.post("/add-symptom", headers=json_headers, json=payload)
+
+        assert resp.status_code == 400 
 
 class TestGetSymptoms:
     """GET /symptoms endpoint tests."""

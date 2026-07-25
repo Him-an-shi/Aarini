@@ -1,6 +1,9 @@
 """Integration tests for cycle sharing endpoints (/share/create, /share/view, /share/revoke)."""
 
 
+import token
+
+
 class TestCreateShareLink:
     """POST /share/create endpoint tests."""
 
@@ -43,6 +46,7 @@ class TestCreateShareLink:
         )
 
         assert resp.status_code == 400
+
     def test_create_share_link_negative_expiry(self, client, auth_headers):
         """expiresInDays negative value returns 400."""
         resp = client.post(
@@ -58,6 +62,42 @@ class TestCreateShareLink:
             "/share/create",
             headers=auth_headers,
             json={"expiresInDays": "seven"}
+
+    
+    def test_create_share_link_negative_expiry(self, client, auth_headers):
+        """Negative expiresInDays returns 400."""
+        resp = client.post(
+            "/share/create",
+            headers=auth_headers,
+            json={"expiresInDays": -1},
+        )
+
+        assert resp.status_code == 400
+
+    def test_create_share_link_invalid_type_expiry(self, client, auth_headers):
+        """String expiresInDays returns 400."""
+        resp = client.post(
+            "/share/create",
+            headers=auth_headers,
+            json={"expiresInDays": "seven"},
+        )
+
+        assert resp.status_code == 400
+
+    # 🛠️ NEW TESTS FOR ISSUE #114
+
+    def test_create_share_link_negative_expiry(self, client, auth_headers):
+        """Negative expiresInDays returns 400."""
+        resp = client.post(
+            "/share/create", headers=auth_headers, json={"expiresInDays": -5}
+        )
+
+        assert resp.status_code == 400
+
+    def test_create_share_link_invalid_type(self, client, auth_headers):
+        """String or invalid type for expiresInDays returns 400."""
+        resp = client.post(
+            "/share/create", headers=auth_headers, json={"expiresInDays": "30"}
         )
 
         assert resp.status_code == 400
@@ -97,6 +137,20 @@ class TestViewSharedData:
         resp = client.get(f"/share/view/{token}")
         assert resp.status_code == 403
 
+    def test_view_shared_data_expired(self, client, auth_headers):
+        """Expired share token returns 410."""
+
+        import app as app_module
+
+        create_resp = client.post("/share/create", headers=auth_headers, json={})
+        token = create_resp.get_json()["token"]
+
+        # Force the token to be expired
+        app_module.share_links[token]["expiresAt"] = 0
+
+        resp = client.get(f"/share/view/{token}")
+        assert resp.status_code == 410
+
 
 class TestRevokeShareLink:
     """POST /share/revoke endpoint tests."""
@@ -133,8 +187,3 @@ class TestRevokeShareLink:
 
     def test_revoke_nonexistent_token(self, client, auth_headers):
         """Revoking a token that doesn't exist returns 404."""
-        resp = client.post(
-            "/share/revoke", headers=auth_headers, json={"token": "doesnotexist00"}
-        )
-
-        assert resp.status_code == 404

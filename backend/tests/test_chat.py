@@ -1,6 +1,9 @@
 """Integration tests for AI chat (/chat) and insights (/insights) endpoints."""
 
 import json
+from unittest.mock import patch
+
+from utils.sanitize import sanitize_for_ai
 
 
 class TestChat:
@@ -32,12 +35,19 @@ class TestChat:
         assert resp.status_code == 400
 
     def test_chat_pii_sanitization(self, client, json_headers):
-        """PII in message should be stripped (mock response is canned, but no crash)."""
+        """PII in message must actually be stripped before reaching the AI layer."""
         payload = {
             "message": "My name is Priya, my email is priya@gmail.com and I have cramps"
         }
-        resp = client.post("/chat", headers=json_headers, json=payload)
 
+        # Directly verify the sanitization function strips PII from the message
+        sanitized, was_modified = sanitize_for_ai(payload["message"])
+        assert was_modified, "sanitize_for_ai should have detected and stripped PII"
+        assert "Priya" not in sanitized, "Name 'Priya' must be stripped from sanitized output"
+        assert "priya@gmail.com" not in sanitized, "Email must be stripped from sanitized output"
+
+        # Verify the endpoint still works correctly with PII-laden input
+        resp = client.post("/chat", headers=json_headers, json=payload)
         assert resp.status_code == 200
         data = resp.get_json()
         assert "response" in data
@@ -103,3 +113,81 @@ class TestHealthCheck:
 
         # In dev mode (no ALLOWED_ORIGINS set), flask-cors adds Access-Control-Allow-Origin
         assert resp.status_code == 200
+
+
+class TestPIISanitization:
+    """Direct unit tests for the sanitize_for_ai function.
+
+    These tests verify that PII is actually stripped from messages,
+    not just that the endpoint doesn't crash (which was the flaw in
+    the original test_chat_pii_sanitization -- see issue #118).
+    """
+
+    def test_email_is_stripped(self):
+        """Email addresses must be replaced with '[email removed]'."""
+        msg = "Contact me at priya@gmail.com for details"
+        sanitized, modified = sanitize_for_ai(msg)
+        assert modified
+        assert "priya@gmail.com" not in sanitized
+        assert "[email removed]" in sanitized
+
+    def test_phone_is_stripped(self):
+        """Phone numbers must be replaced with '[phone removed]'."""
+        msg = "Call me at +91-9876543210 if urgent"
+        sanitized, modified = sanitize_for_ai(msg)
+        assert modified
+        assert "9876543210" not in sanitized
+        assert "[phone removed]" in sanitized
+
+    def test_name_is_stripped(self):
+        """Names following 'my name is' pattern must be replaced."""
+        msg = "My name is Priya and I have cramps"
+        sanitized, modified = sanitize_for_ai(msg)
+        assert modified
+        assert "Priya" not in sanitized
+
+    def test_ssn_is_stripped(self):
+        """SSN patterns (XXX-XX-XXXX) must be replaced with '[id removed]'."""
+        msg = "My SSN is 123-45-6789"
+        sanitized, modified = sanitize_for_ai(msg)
+        assert modified
+        assert "123-45-6789" not in sanitized
+        assert "[id removed]" in sanitized
+
+    def test_address_is_stripped(self):
+        """Street addresses must be replaced with '[address removed]'."""
+        msg = "I live at 123 Main Street and need help"
+        sanitized, modified = sanitize_for_ai(msg)
+        assert modified
+        assert "123 Main Street" not in sanitized
+        assert "[address removed]" in sanitized
+
+    def test_combined_pii_all_stripped(self):
+        """Multiple PII types in one message must all be stripped."""
+        msg = (
+            "My name is Priya, my email is priya@gmail.com, "
+            "call me at +91-9876543210, SSN 123-45-6789"
+        )
+        sanitized, modified = sanitize_for_ai(msg)
+        assert modified
+        assert "Priya" not in sanitized
+        assert "priya@gmail.com" not in sanitized
+        assert "9876543210" not in sanitized
+        assert "123-45-6789" not in sanitized
+
+    def test_clean_message_unchanged(self):
+        """Messages without PII should pass through unmodified."""
+        msg = "I have been experiencing cramps and fatigue"
+        sanitized, modified = sanitize_for_ai(msg)
+        assert not modified
+        assert sanitized == msg
+
+    def test_empty_and_none_input(self):
+        """Empty string and None should return unchanged."""
+        sanitized, modified = sanitize_for_ai("")
+        assert not modified
+        assert sanitized == ""
+
+        sanitized, modified = sanitize_for_ai(None)
+        assert not modified
+        assert sanitized is None

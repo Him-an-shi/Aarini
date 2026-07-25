@@ -106,3 +106,51 @@ class TestLogin:
         resp = client.post("/login", headers=json_headers, json={})
 
         assert resp.status_code == 400
+
+    def test_login_invalid_password(self, client, json_headers):
+        client.post(
+            "/signup",
+            headers=json_headers,
+            json={
+                "name": "Test User",
+                "email": "test@example.com",
+                "password": "correct123",
+            },
+        )
+
+        response = client.post(
+            "/login",
+            headers=json_headers,
+            json={
+                "email": "test@example.com",
+                "password": "wrong123",
+            },
+        )
+
+        assert response.status_code == 401
+
+    def test_login_nonexistent_user(self, client, json_headers):
+        response = client.post(
+            "/login",
+            headers=json_headers,
+            json={
+                "email": "nouser@example.com",
+                "password": "password123",
+            },
+        )
+
+        assert response.status_code == 401
+
+    def test_signup_duplicate_email(self, client, json_headers):
+        payload = {
+            "name": "Duplicate",
+            "email": "duplicate@example.com",
+            "password": "password123",
+        }
+
+        first = client.post("/signup", headers=json_headers, json=payload)
+        assert first.status_code == 201
+
+        second = client.post("/signup", headers=json_headers, json=payload)
+
+        assert second.status_code == 409

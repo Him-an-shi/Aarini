@@ -43,6 +43,24 @@ class TestCreateShareLink:
         )
 
         assert resp.status_code == 400
+    def test_create_share_link_negative_expiry(self, client, auth_headers):
+        """expiresInDays negative value returns 400."""
+        resp = client.post(
+            "/share/create",
+            headers=auth_headers,
+            json={"expiresInDays": -1}
+        )
+
+        assert resp.status_code == 400
+    def test_create_share_link_invalid_type_expiry(self, client, auth_headers):
+        """expiresInDays with invalid type returns 400."""
+        resp = client.post(
+            "/share/create",
+            headers=auth_headers,
+            json={"expiresInDays": "seven"}
+        )
+
+        assert resp.status_code == 400
 
 
 class TestViewSharedData:

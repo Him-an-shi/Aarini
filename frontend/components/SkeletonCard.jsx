@@ -1,6 +1,6 @@
-import React, { useEffect, useRef } from 'react';
-import { Animated, View, StyleSheet } from 'react-native';
-import { useTheme } from '../context/ThemeContext';
+import React, { useEffect, useRef } from 'react'
+import { Animated, View, StyleSheet } from 'react-native'
+import { useTheme } from '../context/ThemeContext'
 
 /**
  * SkeletonCard — A pulsing shimmer placeholder that mirrors the SectionCard
@@ -12,15 +12,10 @@ import { useTheme } from '../context/ThemeContext';
  *   showIcon — whether to render the icon placeholder. Default true
  *   style    — additional style overrides for the outer card View
  */
-export const SkeletonCard = ({
-  height = 140,
-  lines = 3,
-  showIcon = true,
-  style = {},
-}) => {
-  const { theme } = useTheme();
-  const { colors, borderRadius, spacing, shadows } = theme;
-  const pulse = useRef(new Animated.Value(0.4)).current;
+export const SkeletonCard = ({ height = 140, lines = 3, showIcon = true, style = {} }) => {
+  const { theme } = useTheme()
+  const { colors, borderRadius, spacing, shadows } = theme
+  const pulse = useRef(new Animated.Value(0.4)).current
 
   useEffect(() => {
     const anim = Animated.loop(
@@ -35,11 +30,11 @@ export const SkeletonCard = ({
           duration: 800,
           useNativeDriver: true,
         }),
-      ])
-    );
-    anim.start();
-    return () => anim.stop();
-  }, [pulse]);
+      ]),
+    )
+    anim.start()
+    return () => anim.stop()
+  }, [pulse])
 
   const s = StyleSheet.create({
     card: {
@@ -87,9 +82,9 @@ export const SkeletonCard = ({
       borderRadius: borderRadius.sm,
       backgroundColor: colors.mutedBackground,
     },
-  });
+  })
 
-  const lineWidths = ['100%', '80%', '65%'];
+  const lineWidths = ['100%', '80%', '65%']
 
   return (
     <View
@@ -100,9 +95,7 @@ export const SkeletonCard = ({
     >
       {/* Card header row */}
       <View style={s.header}>
-        {showIcon && (
-          <Animated.View style={[s.iconBox, { opacity: pulse }]} />
-        )}
+        {showIcon && <Animated.View style={[s.iconBox, { opacity: pulse }]} />}
         <View style={s.titleArea}>
           <Animated.View style={[s.titleLine, { opacity: pulse }]} />
           <Animated.View style={[s.subtitleLine, { opacity: pulse }]} />
@@ -114,13 +107,10 @@ export const SkeletonCard = ({
         {Array.from({ length: lines }).map((_, i) => (
           <Animated.View
             key={i}
-            style={[
-              s.bodyLine,
-              { opacity: pulse, width: lineWidths[i % lineWidths.length] },
-            ]}
+            style={[s.bodyLine, { opacity: pulse, width: lineWidths[i % lineWidths.length] }]}
           />
         ))}
       </View>
     </View>
-  );
-};
+  )
+}

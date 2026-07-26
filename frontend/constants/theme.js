@@ -35,7 +35,7 @@ export const LIGHT_COLORS = {
   textLight: '#8A819F',
   textOnPrimary: '#FFFFFF',
   textOnSoft: '#4B3F72',
-};
+}
 
 export const DARK_COLORS = {
   primary: '#4D416E',
@@ -68,9 +68,9 @@ export const DARK_COLORS = {
   textLight: '#B6ABC9',
   textOnPrimary: '#211B2D',
   textOnSoft: '#F8F4FF',
-};
+}
 
-export const COLORS = LIGHT_COLORS;
+export const COLORS = LIGHT_COLORS
 
 export const SPACING = {
   xs: 4,
@@ -79,15 +79,15 @@ export const SPACING = {
   lg: 24,
   xl: 32,
   xxl: 40,
-};
+}
 
 export const BORDER_RADIUS = {
   sm: 8,
-  md: 14,                     // Calm, friendly rounded inputs
-  lg: 24,                     // Highly aesthetic rounded cards
-  xl: 32,                     // Soft round button profiles
+  md: 14, // Calm, friendly rounded inputs
+  lg: 24, // Highly aesthetic rounded cards
+  xl: 32, // Soft round button profiles
   round: 999,
-};
+}
 
 const createShadows = (colors, isDark = false) => ({
   // Premium subtle shadows to convey professional card elevations
@@ -111,8 +111,8 @@ const createShadows = (colors, isDark = false) => ({
     shadowOpacity: isDark ? 0.24 : 0.08,
     shadowRadius: 6,
     elevation: 2,
-  }
-});
+  },
+})
 
 const createTypography = (colors) => ({
   // Standard scale relying on system fonts, optimized for Android & iOS readability
@@ -162,15 +162,15 @@ const createTypography = (colors) => ({
     fontWeight: '500',
     color: colors.textLight,
     letterSpacing: 0,
-  }
-});
+  },
+})
 
-export const SHADOWS = createShadows(LIGHT_COLORS);
-export const TYPOGRAPHY = createTypography(LIGHT_COLORS);
+export const SHADOWS = createShadows(LIGHT_COLORS)
+export const TYPOGRAPHY = createTypography(LIGHT_COLORS)
 
 export const createAppTheme = (mode = 'light') => {
-  const isDark = mode === 'dark';
-  const colors = isDark ? DARK_COLORS : LIGHT_COLORS;
+  const isDark = mode === 'dark'
+  const colors = isDark ? DARK_COLORS : LIGHT_COLORS
 
   return {
     mode,
@@ -197,8 +197,8 @@ export const createAppTheme = (mode = 'light') => {
         notification: colors.secondaryDark,
       },
     },
-  };
-};
+  }
+}
 
-export const LIGHT_THEME = createAppTheme('light');
-export const DARK_THEME = createAppTheme('dark');
+export const LIGHT_THEME = createAppTheme('light')
+export const DARK_THEME = createAppTheme('dark')

@@ -1,17 +1,17 @@
-import React from 'react';
-import { StatusBar } from 'expo-status-bar';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { AuthProvider } from './context/AuthContext';
-import { ThemeProvider, useTheme } from './context/ThemeContext';
-import { LanguageProvider } from './i18n/LanguageContext';
-import { NetworkProvider } from './context/NetworkContext';
-import { AppNavigator } from './navigation/AppNavigator';
-import { ThemeToggle } from './components/ThemeToggle';
-import { AppLockGate } from './components/AppLockGate';
-import { OfflineBanner } from './components/OfflineBanner';
+import React from 'react'
+import { StatusBar } from 'expo-status-bar'
+import { SafeAreaProvider } from 'react-native-safe-area-context'
+import { AuthProvider } from './context/AuthContext'
+import { ThemeProvider, useTheme } from './context/ThemeContext'
+import { LanguageProvider } from './i18n/LanguageContext'
+import { NetworkProvider } from './context/NetworkContext'
+import { AppNavigator } from './navigation/AppNavigator'
+import { ThemeToggle } from './components/ThemeToggle'
+import { AppLockGate } from './components/AppLockGate'
+import { OfflineBanner } from './components/OfflineBanner'
 
 const AppContent = () => {
-  const { isDark } = useTheme();
+  const { isDark } = useTheme()
 
   return (
     <AuthProvider>
@@ -22,8 +22,8 @@ const AppContent = () => {
       </AppLockGate>
       <StatusBar style={isDark ? 'light' : 'dark'} />
     </AuthProvider>
-  );
-};
+  )
+}
 
 export default function App() {
   return (
@@ -36,5 +36,5 @@ export default function App() {
         </LanguageProvider>
       </ThemeProvider>
     </SafeAreaProvider>
-  );
+  )
 }

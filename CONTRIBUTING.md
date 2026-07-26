@@ -4,7 +4,7 @@
 
 # 🌸 Contributing to Aarini
 
-### *Thank you for helping us build a better women's health companion!*
+### _Thank you for helping us build a better women's health companion!_
 
 > Every line of code you write helps a woman understand her body a little better. We're so glad you're here. 💜
 
@@ -35,7 +35,7 @@ We use GitHub Issues to manage all tasks. **Please do not start work without bei
 1. **Browse open issues** at [github.com/Him-an-shi/Aarini/issues](https://github.com/Him-an-shi/Aarini/issues)
 2. **Find an issue** that matches your skills and interest
 3. **Comment on the issue** — something like:
-   > *"Hi! I'd love to work on this. I'm familiar with React Native / Flask / docs (pick yours). Can I be assigned? 😊"*
+   > _"Hi! I'd love to work on this. I'm familiar with React Native / Flask / docs (pick yours). Can I be assigned? 😊"_
 4. **Wait for a maintainer to assign you** before you start coding
 5. Once assigned, you own that issue — aim to submit your PR within **7 days** so the issue stays active
 
@@ -47,11 +47,11 @@ We use GitHub Issues to manage all tasks. **Please do not start work without bei
 
 Aarini uses the **ELUSoC'26** contribution program. Each issue is tagged with a difficulty label that carries XP points:
 
-| Label | Difficulty | XP Points | What to Expect |
-|-------|-----------|:---------:|----------------|
-| 🟢 **NEWBIE** | Beginner | **10 XP** | Documentation, small bug fixes, config files, minor UI tweaks |
-| 🔵 **ADVENTURER** | Intermediate | **25 XP** | New features, API routes, screen components, service integrations |
-| 🔴 **VETERAN** | Advanced | **50 XP** | Architecture changes, AI integration, performance optimizations, complex refactors |
+| Label             | Difficulty   | XP Points | What to Expect                                                                     |
+| ----------------- | ------------ | :-------: | ---------------------------------------------------------------------------------- |
+| 🟢 **NEWBIE**     | Beginner     | **10 XP** | Documentation, small bug fixes, config files, minor UI tweaks                      |
+| 🔵 **ADVENTURER** | Intermediate | **25 XP** | New features, API routes, screen components, service integrations                  |
+| 🔴 **VETERAN**    | Advanced     | **50 XP** | Architecture changes, AI integration, performance optimizations, complex refactors |
 
 XP points are tracked on the ELUSoC leaderboard. Every contribution counts — no matter the size! 🌟
 
@@ -61,14 +61,14 @@ XP points are tracked on the ELUSoC leaderboard. Every contribution counts — n
 
 Always create a new branch from `main` for your work. Use the following naming patterns:
 
-| Type | Pattern | Example |
-|------|---------|---------|
-| ✨ New Feature | `feature/your-feature-name` | `feature/ovulation-prediction` |
-| 🐛 Bug Fix | `fix/bug-name` | `fix/cycle-date-validation` |
-| 📚 Documentation | `docs/topic-name` | `docs/contributing-guide` |
-| 💅 Styling / UI | `style/component-name` | `style/dashboard-dark-mode` |
-| ♻️ Refactor | `refactor/what-changed` | `refactor/firebase-queries` |
-| ✅ Tests | `test/what-is-tested` | `test/cycle-tracker-unit` |
+| Type             | Pattern                     | Example                        |
+| ---------------- | --------------------------- | ------------------------------ |
+| ✨ New Feature   | `feature/your-feature-name` | `feature/ovulation-prediction` |
+| 🐛 Bug Fix       | `fix/bug-name`              | `fix/cycle-date-validation`    |
+| 📚 Documentation | `docs/topic-name`           | `docs/contributing-guide`      |
+| 💅 Styling / UI  | `style/component-name`      | `style/dashboard-dark-mode`    |
+| ♻️ Refactor      | `refactor/what-changed`     | `refactor/firebase-queries`    |
+| ✅ Tests         | `test/what-is-tested`       | `test/cycle-tracker-unit`      |
 
 ```bash
 # Always branch off from main
@@ -157,26 +157,32 @@ All Pull Requests **must** follow this title format:
 When opening a Pull Request, please fill out the following in your description:
 
 ### 🔗 Linked Issue
+
 ```
 Closes #<issue-number>
 ```
+
 Every PR **must** be linked to an issue. No issue → No PR.
 
 ### 📝 Summary
-A short description of *what* you changed and *why*.
 
-> Example: *"Created `frontend/.env.example` so new contributors have a clear template for the required environment variables. Updated `services/api.js` to use `process.env.EXPO_PUBLIC_API_URL` with a `localhost:5000` fallback."*
+A short description of _what_ you changed and _why_.
+
+> Example: _"Created `frontend/.env.example` so new contributors have a clear template for the required environment variables. Updated `services/api.js` to use `process.env.EXPO_PUBLIC_API_URL` with a `localhost:5000` fallback."_
 
 ### 📸 Screenshots (if UI changed)
+
 If your change affects any screen or visual component, include before/after screenshots. This helps reviewers quickly validate the change.
 
 ### 🧪 Testing Performed
+
 Describe what you tested:
+
 - Did the app build without errors?
 - Did you test on a real device or emulator?
 - Which flows did you manually verify?
 
-> Example: *"Tested on Android emulator (Pixel 7). App builds and runs. Login, cycle tracking, and AI chat all functional."*
+> Example: _"Tested on Android emulator (Pixel 7). App builds and runs. Login, cycle tracking, and AI chat all functional."_
 
 ---
 
@@ -200,15 +206,15 @@ Before submitting your PR, make sure all of the following are true:
 
 Please avoid the following — they are the most common reasons PRs get closed without merging:
 
-| ❌ Don't | ✅ Do Instead |
-|----------|--------------|
-| Open a PR without being assigned | Comment on the issue first and wait for assignment |
-| Bundle multiple unrelated fixes in one PR | One issue → One PR |
-| Push directly to `main` | Always work on a feature/fix/docs branch |
-| Commit `.env` or service account JSON files | Keep secrets out of version control — use `.env.example` as a template |
-| Copy-paste code from other repositories without credit | Write original code; if referencing something, attribute it |
-| Use a generic branch name like `patch-1` or `my-branch` | Follow the naming convention: `feature/your-feature-name` |
-| Skip the PR description | Fill out all required fields — linked issue, summary, testing |
+| ❌ Don't                                                | ✅ Do Instead                                                          |
+| ------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Open a PR without being assigned                        | Comment on the issue first and wait for assignment                     |
+| Bundle multiple unrelated fixes in one PR               | One issue → One PR                                                     |
+| Push directly to `main`                                 | Always work on a feature/fix/docs branch                               |
+| Commit `.env` or service account JSON files             | Keep secrets out of version control — use `.env.example` as a template |
+| Copy-paste code from other repositories without credit  | Write original code; if referencing something, attribute it            |
+| Use a generic branch name like `patch-1` or `my-branch` | Follow the naming convention: `feature/your-feature-name`              |
+| Skip the PR description                                 | Fill out all required fields — linked issue, summary, testing          |
 
 > 💬 If you're unsure about anything, ask in the issue comments before starting. We're always happy to help! 🌸
 
@@ -228,7 +234,7 @@ As a contributor, you agree to:
 
 Harassment, discrimination, or disrespectful behavior of any kind will result in immediate removal from the project.
 
-> *"When women thrive, the world thrives."* — Let's build something worthy of that.
+> _"When women thrive, the world thrives."_ — Let's build something worthy of that.
 
 ---
 
@@ -236,7 +242,7 @@ Harassment, discrimination, or disrespectful behavior of any kind will result in
 
 Built with 💜 by [Himanshi](https://github.com/Him-an-shi) and the Aarini Community
 
-*Questions? Open a [GitHub Discussion](https://github.com/Him-an-shi/Aarini/discussions) or drop a comment on the relevant issue.*
+_Questions? Open a [GitHub Discussion](https://github.com/Him-an-shi/Aarini/discussions) or drop a comment on the relevant issue._
 
 <br/>
 

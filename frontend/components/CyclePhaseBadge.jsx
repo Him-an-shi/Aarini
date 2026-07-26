@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { useTheme } from '../context/ThemeContext';
+import React, { useMemo } from 'react'
+import { View, Text, StyleSheet } from 'react-native'
+import { useTheme } from '../context/ThemeContext'
 
 /**
  * CyclePhaseBadge — Displays the current cycle phase as a coloured pill badge
@@ -32,7 +32,7 @@ const PHASE_META = {
     label: 'Ovulation',
     bgKey: 'accent',
     textKey: 'accentDark',
-    description: 'Peak energy and confidence. You\'re glowing! 🌟',
+    description: "Peak energy and confidence. You're glowing! 🌟",
   },
   Luteal: {
     emoji: '🌙',
@@ -41,24 +41,25 @@ const PHASE_META = {
     textKey: 'textMedium',
     description: 'Wind down, nourish your body, and honour your needs.',
   },
-};
+}
 
 const daysUntil = (isoDate) => {
-  if (!isoDate) return null;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const target = new Date(isoDate + 'T00:00:00');
-  const diff = Math.round((target - today) / (24 * 60 * 60 * 1000));
-  return diff;
-};
+  if (!isoDate) return null
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const target = new Date(isoDate + 'T00:00:00')
+  const diff = Math.round((target - today) / (24 * 60 * 60 * 1000))
+  return diff
+}
 
 export const CyclePhaseBadge = ({ prediction, style = {} }) => {
-  const { theme } = useTheme();
-  const { colors, typography, spacing, borderRadius, shadows } = theme;
+  const { theme } = useTheme()
+  const { colors, typography, spacing, borderRadius, shadows } = theme
 
-  const styles = useMemo(() => createStyles(colors, spacing, borderRadius, shadows), [
-    colors, spacing, borderRadius, shadows,
-  ]);
+  const styles = useMemo(
+    () => createStyles(colors, spacing, borderRadius, shadows),
+    [colors, spacing, borderRadius, shadows],
+  )
 
   // No history yet — show an encouraging placeholder
   if (!prediction || !prediction.hasHistory || !prediction.currentPhase) {
@@ -69,14 +70,14 @@ export const CyclePhaseBadge = ({ prediction, style = {} }) => {
           Log your first period to unlock your cycle phase prediction.
         </Text>
       </View>
-    );
+    )
   }
 
-  const phase = prediction.currentPhase; // e.g. 'Follicular'
-  const meta = PHASE_META[phase] || PHASE_META.Luteal;
-  const phaseBg = colors[meta.bgKey];
-  const phaseText = colors[meta.textKey];
-  const daysLeft = daysUntil(prediction.nextPeriodStart);
+  const phase = prediction.currentPhase // e.g. 'Follicular'
+  const meta = PHASE_META[phase] || PHASE_META.Luteal
+  const phaseBg = colors[meta.bgKey]
+  const phaseText = colors[meta.textKey]
+  const daysLeft = daysUntil(prediction.nextPeriodStart)
 
   return (
     <View
@@ -121,8 +122,8 @@ export const CyclePhaseBadge = ({ prediction, style = {} }) => {
         )}
       </View>
     </View>
-  );
-};
+  )
+}
 
 const createStyles = (colors, spacing, borderRadius, shadows) =>
   StyleSheet.create({
@@ -218,4 +219,4 @@ const createStyles = (colors, spacing, borderRadius, shadows) =>
       color: colors.textMedium,
       lineHeight: 20,
     },
-  });
+  })

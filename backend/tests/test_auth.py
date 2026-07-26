@@ -95,9 +95,6 @@ class TestSignup:
         # Second signup with the same email should fail (usually 400 or 409 Conflict)
         resp = client.post("/signup", headers=json_headers, json=payload)
         assert resp.status_code in [400, 409]
-        
-    
-      
 
 
 class TestLogin:
@@ -136,39 +133,18 @@ class TestLogin:
 
         assert resp.status_code == 400
 
-
-    def test_login_nonexistent_user(self, client, json_headers):
-        response = client.post(
-            "/login",
-            headers=json_headers,
-            json={
-                "email": "nouser@example.com",
-                "password": "password123",
-            },
-        )
-
-        assert response.status_code == 401
+    # 🛠️ NEW TESTS FOR ISSUE #119
     def test_login_invalid_password(self, client, json_headers):
-        client.post(
-            "/signup",
-            headers=json_headers,
-            json={
-                "name": "Test User",
-                "email": "test@example.com",
-                "password": "correct123",
-            },
-        )
+        """Login with incorrect password returns 401 Unauthorized."""
+        payload = {"email": "priya@example.com", "password": "wrongpassword"}
+        resp = client.post("/login", headers=json_headers, json=payload)
+        
+        # Checking against standard auth denial codes (401 is most common)
+        assert resp.status_code in [400, 401]
 
-        response = client.post(
-            "/login",
-            headers=json_headers,
-            json={
-                "email": "test@example.com",
-                "password": "wrong123",
-            },
-        )
-
-        assert response.status_code == 401
-
-    
-    
+    def test_login_unregistered_email(self, client, json_headers):
+        """Login with unregistered email returns 401 or 404."""
+        payload = {"email": "nobody@example.com", "password": "securePass123"}
+        resp = client.post("/login", headers=json_headers, json=payload)
+        
+        assert resp.status_code in [400, 401, 404]

@@ -24,7 +24,20 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 app = Flask(__name__)
+from flask_smorest import Api
 
+
+app.config["API_TITLE"] = "Aarini API"
+app.config["API_VERSION"] = "1.0.0"
+app.config["OPENAPI_VERSION"] = "3.0.3"
+
+app.config["OPENAPI_URL_PREFIX"] = "/"
+app.config["OPENAPI_SWAGGER_UI_PATH"] = "/docs"
+app.config["OPENAPI_SWAGGER_UI_URL"] = "https://cdn.jsdelivr.net/npm/swagger-ui-dist/"
+# OpenAPI/Swagger configuration.
+# Individual API endpoints can be migrated to Flask-Smorest
+# blueprints incrementally for automatic documentation.
+api = Api(app)
 # CORS: restrict origins in production, allow all in development
 allowed_origins = os.getenv("ALLOWED_ORIGINS", "").split(",")
 allowed_origins = [o.strip() for o in allowed_origins if o.strip()]
@@ -37,6 +50,7 @@ init_limiter(app)
 from middleware.error_handler import register_error_handlers
 register_error_handlers(app)
 mock_cycles = {}
+mock_users = {}
 
 # Placeholder for Firebase Admin SDK initialization
 firebase_initialized = False
@@ -177,14 +191,28 @@ def signup():
 
     # Fallback/Mock behavior if Firebase is not yet connected
     if not firebase_initialized:
+        if email in mock_users:
+            return jsonify({     
+                "error": "User already exists"
+            }), 409
+
+        mock_users[email] = {
+            "uid": f"mock_user_{len(mock_users)+1}",
+            "name": name,
+            "email": email,
+            "password": password,
+            "age": age,
+            "cycleLength": cycle_length,
+        }
+
         return jsonify({
             "message": "User registered successfully (Mock Mode)",
             "user": {
-                "uid": "mock_user_123",
+                "uid": mock_users[email]["uid"],
                 "name": name,
                 "email": email,
                 "age": age,
-                "cycleLength": cycle_length
+                "cycleLength": cycle_length,
             }
         }), 201
 
@@ -237,14 +265,26 @@ def login():
 
     # Mock behavior
     if not firebase_initialized:
+        user = mock_users.get(email)
+
+        if user is None:
+            return jsonify({
+                "error": "Invalid email or password"
+            }), 401
+
+        if user["password"] != password:
+            return jsonify({
+                "error": "Invalid email or password"
+            }), 401
+
         return jsonify({
             "message": "Logged in successfully (Mock Mode)",
             "token": "mock_jwt_token_abc123",
             "user": {
-                "uid": "mock_user_123",
-                "name": "Jane Doe",
-                "email": email,
-                "cycleLength": 28
+                "uid": user["uid"],
+                "name": user["name"],
+                "email": user["email"],
+                "cycleLength": user["cycleLength"],
             }
         }), 200
 

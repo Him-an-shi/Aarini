@@ -37,7 +37,6 @@ init_limiter(app)
 from middleware.error_handler import register_error_handlers
 register_error_handlers(app)
 mock_cycles = {}
-share_links = {}
 
 # Placeholder for Firebase Admin SDK initialization
 firebase_initialized = False
@@ -492,6 +491,82 @@ def get_cycle_prediction():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route("/cycles/<cycle_id>", methods=["PUT"])
+@authenticated_user
+@validate_request({
+    "startDate": {"type": "date", "required": False},
+    "endDate": {"type": "date", "required": False},
+})
+def update_cycle(cycle_id):
+    """Update an existing cycle entry."""
+    data = request.get_json() or {}
+    uid = request.user_id
+    logger.info(f"Updating cycle {cycle_id} for user: {uid}")
+
+    allowed_fields = {"startDate", "endDate", "flowIntensity", "symptoms", "mood"}
+    updates = {k: v for k, v in data.items() if k in allowed_fields}
+
+    if not updates:
+        return jsonify({"error": "No valid fields to update"}), 400
+
+    if "startDate" in updates or "endDate" in updates:
+        start = parse_date(updates.get("startDate", ""))
+        end = parse_date(updates.get("endDate", ""))
+        if end < start:
+            return jsonify({"error": "endDate cannot be before startDate"}), 400
+
+    if not firebase_initialized:
+        user_cycles = mock_cycles.get(uid, [])
+        target = next((c for c in user_cycles if c.get("id") == cycle_id), None)
+        if not target:
+            return jsonify({"error": "Cycle entry not found"}), 404
+        target.update(updates)
+        invalidate_cache(uid)
+        return jsonify({"message": "Cycle updated (Mock Mode)", "cycle": target}), 200
+
+    try:
+        cycle_ref = db.collection("users").document(uid).collection("cycles").document(cycle_id)
+        doc = cycle_ref.get()
+        if not doc.exists:
+            return jsonify({"error": "Cycle entry not found"}), 404
+        cycle_ref.update(updates)
+        invalidate_cache(uid)
+        return jsonify({"message": "Cycle updated"}), 200
+    except Exception as e:
+        logger.error(f"Error updating cycle: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/cycles/<cycle_id>", methods=["DELETE"])
+@authenticated_user
+def delete_cycle(cycle_id):
+    """Permanently remove a cycle entry."""
+    uid = request.user_id
+    logger.info(f"Deleting cycle {cycle_id} for user: {uid}")
+
+    if not firebase_initialized:
+        user_cycles = mock_cycles.get(uid, [])
+        original_len = len(user_cycles)
+        mock_cycles[uid] = [c for c in user_cycles if c.get("id") != cycle_id]
+        if len(mock_cycles[uid]) == original_len:
+            return jsonify({"error": "Cycle entry not found"}), 404
+        invalidate_cache(uid)
+        return jsonify({"message": "Cycle deleted (Mock Mode)"}), 200
+
+    try:
+        cycle_ref = db.collection("users").document(uid).collection("cycles").document(cycle_id)
+        doc = cycle_ref.get()
+        if not doc.exists:
+            return jsonify({"error": "Cycle entry not found"}), 404
+        cycle_ref.delete()
+        invalidate_cache(uid)
+        return jsonify({"message": "Cycle deleted"}), 200
+    except Exception as e:
+        logger.error(f"Error deleting cycle: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
+# ----------------- CYCLE UPDATE/DELETE ENDPOINTS -----------------
 
 @app.route("/cycles/<cycle_id>", methods=["PUT"])
 @authenticated_user
@@ -1284,91 +1359,6 @@ def create_share_link():
         "expiresInDays": expires_in_days,
         "shareUrl": f"/share/view/{token}",
     }), 201
-
-
-@app.route("/share/view/<token>", methods=["GET"])
-@limiter.limit(RATE_LIMITS["share_view"])
-def view_shared_data(token):
-    """View read-only cycle data via a valid share token."""
-    link_data = None
-    if not firebase_initialized:
-        link_data = share_links.get(token)
-    else:
-        try:
-            doc = db.collection("share_links").document(token).get()
-            if doc.exists:
-                link_data = doc.to_dict()
-        except Exception as e:
-            logger.error(f"Error fetching share link: {str(e)}")
-
-    if not link_data:
-        return jsonify({"error": "Share link not found or invalid"}), 404
-
-    if not link_data.get("active", True):
-        return jsonify({"error": "Share link has been revoked"}), 403
-
-    if link_data.get("expiresAt", 0) < int(time.time()):
-        return jsonify({"error": "Share link has expired"}), 410
-
-    uid = link_data["uid"]
-    cycles_list = []
-    if not firebase_initialized:
-        cycles_list = mock_cycles.get(uid, [])
-    else:
-        try:
-            cycles_ref = db.collection("users").document(uid).collection("cycles").order_by("startDate", direction=firestore.Query.DESCENDING)
-            cycles_list = [d.to_dict() | {"id": d.id} for d in cycles_ref.stream()]
-        except Exception as e:
-            logger.error(f"Error fetching shared cycles: {str(e)}")
-
-    prediction = predict_cycle(cycles_list)
-    return jsonify({
-        "cycles": cycles_list,
-        "prediction": prediction,
-        "disclaimer": "This data is shared for informational purposes only.",
-    }), 200
-
-
-@app.route("/share/revoke", methods=["POST"])
-@authenticated_user
-@limiter.limit(RATE_LIMITS["share_revoke"])
-def revoke_share_link():
-    """Revoke a previously created share link."""
-    data = request.get_json() or {}
-    token = data.get("token")
-    if not token:
-        return jsonify({"error": "Token is required"}), 400
-
-    uid = request.user_id
-
-    link_data = None
-    if not firebase_initialized:
-        link_data = share_links.get(token)
-    else:
-        try:
-            doc_ref = db.collection("share_links").document(token)
-            doc = doc_ref.get()
-            if doc.exists:
-                link_data = doc.to_dict()
-        except Exception as e:
-            logger.error(f"Error fetching share link for revocation: {str(e)}")
-
-    if not link_data:
-        return jsonify({"error": "Share link not found"}), 404
-
-    if link_data.get("uid") != uid:
-        return jsonify({"error": "You do not have permission to revoke this link"}), 403
-
-    if not firebase_initialized:
-        share_links[token]["active"] = False
-    else:
-        try:
-            db.collection("share_links").document(token).update({"active": False})
-        except Exception as e:
-            logger.error(f"Error revoking share link: {str(e)}")
-
-    return jsonify({"message": "Share link revoked"}), 200
-
     # Startup summary
     gemini_status = "configured" if os.getenv("GEMINI_API_KEY") else "mock (no GEMINI_API_KEY)"
     firebase_status = "connected" if firebase_initialized else "mock"

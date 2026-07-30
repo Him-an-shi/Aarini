@@ -49,7 +49,10 @@ RATE_LIMITS = {
     "add_mood": "30 per minute",
     "delete_account": "3 per hour",
     "share_create": "10 per hour",
+    "share_view": "30 per minute",
+    "share_revoke": "10 per hour",
 }
+
 
 
 def rate_limit_exceeded_handler(e):

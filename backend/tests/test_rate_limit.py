@@ -80,7 +80,10 @@ class TestLoginRateLimit:
         assert "error" in data
         assert "Too many requests" in data["error"]
         assert "retry_after" in data
+        assert "code" in data
+        assert data["code"] == "RATE_LIMITED"
 
 
 class TestChatRateLimit:
-    """Chat: 20
+    """Chat endpoint rate limit tests."""
+    pass

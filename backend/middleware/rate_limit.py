@@ -13,6 +13,7 @@ import os
 from flask import request, jsonify
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from utils.errors import RateLimitError
 
 
 def _get_key():
@@ -53,8 +54,8 @@ RATE_LIMITS = {
 
 
 def rate_limit_exceeded_handler(e):
-    """Custom 429 response with Retry-After header."""
-    desc = str(e.description or "")
+    """Custom 429 response using RateLimitError with Retry-After header."""
+    desc = str(getattr(e, "description", "") or "")
     if "second" in desc:
         retry_after = 1
     elif "minute" in desc:
@@ -64,11 +65,12 @@ def rate_limit_exceeded_handler(e):
     else:
         retry_after = 60
 
-    response = jsonify({
-        "error": "Too many requests. Please slow down.",
-        "retry_after": retry_after,
-    })
-    response.status_code = 429
+    err = RateLimitError(payload={"retry_after": retry_after})
+    data = err.to_dict()
+    data["retry_after"] = retry_after
+
+    response = jsonify(data)
+    response.status_code = err.status_code
     response.headers["Retry-After"] = str(retry_after)
     return response
 

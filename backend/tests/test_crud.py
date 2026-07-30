@@ -72,6 +72,27 @@ class TestUpdateCycle:
         }, headers=auth_headers)
         assert resp.status_code == 400
 
+    def test_update_cycle_cross_user_denied(self, client):
+        user_a_headers = {"Content-Type": "application/json", "X-User-Id": "user_a"}
+        user_b_headers = {"Content-Type": "application/json", "X-User-Id": "user_b"}
+
+        create = client.post("/add-cycle", json={
+            "startDate": "2026-03-01",
+            "endDate": "2026-03-05",
+        }, headers=user_a_headers)
+        assert create.status_code == 201
+        cycle_id = create.get_json()["cycle"]["id"]
+
+        resp = client.put(f"/cycles/{cycle_id}", json={
+            "startDate": "2026-03-02",
+            "endDate": "2026-03-06",
+        }, headers=user_b_headers)
+        assert resp.status_code in [403, 404]
+
+        get_resp = client.get(f"/cycles/{cycle_id}", headers=user_a_headers)
+        assert get_resp.status_code == 200
+        assert get_resp.get_json()["cycle"]["startDate"] == "2026-03-01"
+
 
 class TestDeleteCycle:
     """DELETE /cycles/:id"""
@@ -102,6 +123,23 @@ class TestDeleteCycle:
         cycles_resp = client.get("/cycles", headers=auth_headers)
         cycle_ids = [c["id"] for c in cycles_resp.get_json()["cycles"]]
         assert cycle_id not in cycle_ids
+
+    def test_delete_cycle_cross_user_denied(self, client):
+        user_a_headers = {"Content-Type": "application/json", "X-User-Id": "user_a"}
+        user_b_headers = {"Content-Type": "application/json", "X-User-Id": "user_b"}
+
+        create = client.post("/add-cycle", json={
+            "startDate": "2026-05-01",
+            "endDate": "2026-05-05",
+        }, headers=user_a_headers)
+        cycle_id = create.get_json()["cycle"]["id"]
+
+        resp = client.delete(f"/cycles/{cycle_id}", headers=user_b_headers)
+        assert resp.status_code in [403, 404]
+
+        get_resp = client.get(f"/cycles/{cycle_id}", headers=user_a_headers)
+        assert get_resp.status_code == 200
+        assert get_resp.get_json()["cycle"]["id"] == cycle_id
 
 
 class TestUpdateSymptom:
@@ -154,4 +192,52 @@ class TestUpdateSymptom:
         uid = "test_user_001"
         mock_symptoms[uid] = [{"id": "sym_sev_1", "type": "Cramps", "severity": "Low", "date": "2026-05-20"}]
 
-        resp = client.put("/symptoms/sym
+        resp = client.put("/symptoms/sym_sev_1", json={
+            "type": "Cramps",
+            "severity": "InvalidSeverity",
+            "date": "2026-05-20",
+        }, headers=auth_headers)
+        assert resp.status_code == 400
+
+    def test_update_symptom_cross_user_denied(self, client):
+        from app import mock_symptoms
+        user_b_headers = {"Content-Type": "application/json", "X-User-Id": "user_b"}
+        mock_symptoms["user_a"] = [{"id": "sym_user_a", "type": "Cramps", "severity": "Low", "date": "2026-05-20"}]
+
+        resp = client.put("/symptoms/sym_user_a", json={
+            "type": "Headache",
+            "severity": "High",
+            "date": "2026-05-21",
+        }, headers=user_b_headers)
+        assert resp.status_code in [403, 404]
+
+        assert mock_symptoms["user_a"][0]["type"] == "Cramps"
+        assert mock_symptoms["user_a"][0]["severity"] == "Low"
+
+
+class TestDeleteSymptom:
+    """DELETE /symptoms/:id"""
+
+    def test_delete_symptom_success(self, client, auth_headers):
+        from app import mock_symptoms
+        uid = "test_user_001"
+        mock_symptoms[uid] = [{"id": "sym_del_1", "type": "Cramps", "severity": "Low", "date": "2026-05-20"}]
+
+        resp = client.delete("/symptoms/sym_del_1", headers=auth_headers)
+        assert resp.status_code == 200
+        assert mock_symptoms[uid] == []
+
+    def test_delete_symptom_not_found(self, client, auth_headers):
+        resp = client.delete("/symptoms/nonexistent_id", headers=auth_headers)
+        assert resp.status_code == 404
+
+    def test_delete_symptom_cross_user_denied(self, client):
+        from app import mock_symptoms
+        user_b_headers = {"Content-Type": "application/json", "X-User-Id": "user_b"}
+        mock_symptoms["user_a"] = [{"id": "sym_del_user_a", "type": "Fatigue", "severity": "Medium", "date": "2026-05-22"}]
+
+        resp = client.delete("/symptoms/sym_del_user_a", headers=user_b_headers)
+        assert resp.status_code in [403, 404]
+
+        assert len(mock_symptoms["user_a"]) == 1
+        assert mock_symptoms["user_a"][0]["id"] == "sym_del_user_a"

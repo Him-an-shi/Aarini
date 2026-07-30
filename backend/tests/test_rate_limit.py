@@ -83,5 +83,4 @@ class TestLoginRateLimit:
 
 
 class TestChatRateLimit:
-    """Chat endpoint rate limit tests."""
-    pass
+    """Chat: 20

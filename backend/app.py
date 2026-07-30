@@ -697,11 +697,15 @@ def get_symptoms():
     logger.info(f"Retrieving symptoms for user: {uid}")
 
     if not firebase_initialized:
+        user_symptoms = mock_symptoms.get(uid)
+        if user_symptoms is not None:
+            return jsonify(user_symptoms), 200
         return jsonify([
             {"type": "Cramps", "severity": "Medium", "date": "2026-05-24"},
             {"type": "Fatigue", "severity": "High", "date": "2026-05-23"},
             {"type": "Acne", "severity": "Low", "date": "2026-05-20"}
         ]), 200
+
 
     try:
         symptoms_ref = db.collection("users").document(uid).collection("symptoms").order_by("date", direction=firestore.Query.DESCENDING)
@@ -1107,12 +1111,15 @@ def delete_account():
     logger.info(f"Account deletion requested for user: {uid}")
 
     if not firebase_initialized:
-        mock_cycles.pop(uid, None)
-        mock_symptoms.pop(uid, None) # 🛠️ FIX 3: Clear mock symptoms from RAM
+        mock_cycles[uid] = []
+        mock_symptoms[uid] = []
+        mock_moods[uid] = []
         return jsonify({
             "message": "Account and all health data permanently deleted (Mock Mode)",
             "deletedCollections": ["cycles", "symptoms", "moods", "profile"]
         }), 200
+
+
 
     try:
         user_doc = db.collection("users").document(uid)

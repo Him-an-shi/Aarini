@@ -157,6 +157,8 @@ def index():
     "name": {"type": "string", "required": True, "min_length": 1},
     "email": {"type": "email", "required": True},
     "password": {"type": "string", "required": True, "min_length": 6},
+    "age": {"type": "number", "integer": True, "min": 10, "max": 120},
+    "cycleLength": {"type": "number", "integer": True, "min": 15, "max": 60},
 })
 def signup():
     """
@@ -335,7 +337,9 @@ def google_login():
 @validate_request({
     "startDate": {"type": "date", "required": True},
     "endDate": {"type": "date", "required": True},
-    "flowIntensity": {"type": "string", "required": False},
+    "flowIntensity": {"type": "string", "allowed": ["Low", "Medium", "High"], "case_insensitive": True},
+    "symptoms": {"type": "array"},
+    "mood": {"type": "string", "allowed": ["Great", "Good", "Okay", "Low", "Bad", "Neutral"], "case_insensitive": True},
 })
 def add_cycle():
     """
@@ -496,6 +500,9 @@ def get_cycle_prediction():
 @validate_request({
     "startDate": {"type": "date", "required": False},
     "endDate": {"type": "date", "required": False},
+    "flowIntensity": {"type": "string", "allowed": ["Low", "Medium", "High"], "case_insensitive": True},
+    "symptoms": {"type": "array"},
+    "mood": {"type": "string", "allowed": ["Great", "Good", "Okay", "Low", "Bad", "Neutral"], "case_insensitive": True},
 })
 def update_cycle(cycle_id):
     """Update an existing cycle entry."""
@@ -572,8 +579,8 @@ def delete_cycle(cycle_id):
 @limiter.limit(RATE_LIMITS["add_symptom"])
 @authenticated_user
 @validate_request({
-    "type": {"type": "string", "required": True},
-    "severity": {"type": "string", "required": True},
+    "type": {"type": "string", "required": True, "allowed": ["Cramps", "Headache", "Bloating", "Fatigue", "Acne", "Nausea", "Mood swings", "Breast tenderness"], "case_insensitive": True},
+    "severity": {"type": "string", "required": True, "allowed": ["Low", "Medium", "High", "Mild", "Moderate", "Severe"], "case_insensitive": True},
     "date": {"type": "date", "required": True},
 })
 def add_symptom():
@@ -644,8 +651,8 @@ mock_symptoms = {}
 @app.route("/symptoms/<symptom_id>", methods=["PUT"])
 @authenticated_user
 @validate_request({
-    "type": {"type": "string", "required": True},
-    "severity": {"type": "string", "required": True},
+    "type": {"type": "string", "required": True, "allowed": ["Cramps", "Headache", "Bloating", "Fatigue", "Acne", "Nausea", "Mood swings", "Breast tenderness"], "case_insensitive": True},
+    "severity": {"type": "string", "required": True, "allowed": ["Low", "Medium", "High", "Mild", "Moderate", "Severe"], "case_insensitive": True},
     "date": {"type": "date", "required": True},
 })
 def update_symptom(symptom_id):
@@ -786,6 +793,9 @@ def chat():
 @app.route("/chat/stream", methods=["POST"])
 @limiter.limit(RATE_LIMITS["chat_stream"])
 @authenticated_user
+@validate_request({
+    "message": {"type": "string", "required": True, "min_length": 1, "max_length": 2000},
+})
 def chat_stream():
     """
     Streaming AI chat via Server-Sent Events.
@@ -992,7 +1002,9 @@ def get_profile():
 @app.route("/profile", methods=["PUT"])
 @authenticated_user
 @validate_request({
-    "name": {"type": "string", "required": False},
+    "name": {"type": "string", "min_length": 1},
+    "age": {"type": "number", "integer": True, "min": 10, "max": 120},
+    "cycleLength": {"type": "number", "integer": True, "min": 15, "max": 60},
 })
 def update_profile():
     """Update the authenticated user's profile information."""

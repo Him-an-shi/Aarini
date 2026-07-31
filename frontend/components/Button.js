@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
-import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, View } from 'react-native';
-import { useTheme } from '../context/ThemeContext';
+import React, { useMemo } from 'react'
+import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, View } from 'react-native'
+import { useTheme } from '../context/ThemeContext'
 
 export const Button = ({
   onPress,
@@ -12,16 +12,16 @@ export const Button = ({
   textStyle = {},
   icon,
 }) => {
-  const { theme } = useTheme();
-  const { colors, typography, borderRadius, shadows, spacing } = theme;
+  const { theme } = useTheme()
+  const { colors, typography, borderRadius, shadows, spacing } = theme
   const styles = useMemo(
     () => createStyles(colors, borderRadius, shadows, spacing),
-    [borderRadius, colors, shadows, spacing]
-  );
-  const isPrimary = variant === 'primary';
-  const isSecondary = variant === 'secondary';
-  const isOutline = variant === 'outline';
-  const isText = variant === 'text';
+    [borderRadius, colors, shadows, spacing],
+  )
+  const isPrimary = variant === 'primary'
+  const isSecondary = variant === 'secondary'
+  const isOutline = variant === 'outline'
+  const isText = variant === 'text'
 
   const buttonStyles = [
     styles.base,
@@ -31,7 +31,7 @@ export const Button = ({
     isText && styles.text,
     disabled && styles.disabled,
     style,
-  ];
+  ]
 
   const labelStyles = [
     typography.buttonText,
@@ -41,7 +41,7 @@ export const Button = ({
     isText && styles.textLabel,
     disabled && styles.disabledLabel,
     textStyle,
-  ];
+  ]
 
   return (
     <TouchableOpacity
@@ -54,9 +54,9 @@ export const Button = ({
       accessibilityState={{ disabled: disabled || loading }}
     >
       {loading ? (
-        <ActivityIndicator 
-          size="small" 
-          color={isPrimary ? colors.textOnPrimary : colors.primaryDark} 
+        <ActivityIndicator
+          size="small"
+          color={isPrimary ? colors.textOnPrimary : colors.primaryDark}
         />
       ) : (
         <>
@@ -65,63 +65,64 @@ export const Button = ({
         </>
       )}
     </TouchableOpacity>
-  );
-};
+  )
+}
 
-const createStyles = (colors, borderRadius, shadows, spacing) => StyleSheet.create({
-  base: {
-    height: 56,
-    borderRadius: borderRadius.xl,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.lg,
-    marginVertical: spacing.sm,
-    width: '100%',
-  },
-  primary: {
-    backgroundColor: colors.primaryDark,
-    ...shadows.light,
-  },
-  secondary: {
-    backgroundColor: colors.secondary,
-    ...shadows.light,
-  },
-  outline: {
-    backgroundColor: 'transparent',
-    borderWidth: 2,
-    borderColor: colors.primaryDark,
-  },
-  text: {
-    backgroundColor: 'transparent',
-    height: 'auto',
-    paddingHorizontal: 0,
-    marginVertical: spacing.xs,
-    width: 'auto',
-  },
-  disabled: {
-    backgroundColor: colors.mutedBackground,
-    borderColor: colors.border,
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  primaryLabel: {
-    color: colors.textOnPrimary,
-  },
-  secondaryLabel: {
-    color: colors.textOnSoft,
-  },
-  outlineLabel: {
-    color: colors.primaryDark,
-  },
-  textLabel: {
-    color: colors.primaryDark,
-    fontSize: 14,
-  },
-  disabledLabel: {
-    color: colors.textLight,
-  },
-  iconContainer: {
-    marginRight: spacing.sm,
-  },
-});
+const createStyles = (colors, borderRadius, shadows, spacing) =>
+  StyleSheet.create({
+    base: {
+      height: 56,
+      borderRadius: borderRadius.xl,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: spacing.lg,
+      marginVertical: spacing.sm,
+      width: '100%',
+    },
+    primary: {
+      backgroundColor: colors.primaryDark,
+      ...shadows.light,
+    },
+    secondary: {
+      backgroundColor: colors.secondary,
+      ...shadows.light,
+    },
+    outline: {
+      backgroundColor: 'transparent',
+      borderWidth: 2,
+      borderColor: colors.primaryDark,
+    },
+    text: {
+      backgroundColor: 'transparent',
+      height: 'auto',
+      paddingHorizontal: 0,
+      marginVertical: spacing.xs,
+      width: 'auto',
+    },
+    disabled: {
+      backgroundColor: colors.mutedBackground,
+      borderColor: colors.border,
+      shadowOpacity: 0,
+      elevation: 0,
+    },
+    primaryLabel: {
+      color: colors.textOnPrimary,
+    },
+    secondaryLabel: {
+      color: colors.textOnSoft,
+    },
+    outlineLabel: {
+      color: colors.primaryDark,
+    },
+    textLabel: {
+      color: colors.primaryDark,
+      fontSize: 14,
+    },
+    disabledLabel: {
+      color: colors.textLight,
+    },
+    iconContainer: {
+      marginRight: spacing.sm,
+    },
+  })

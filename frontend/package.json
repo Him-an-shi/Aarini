@@ -15,6 +15,7 @@
     "expo-document-picker": "~13.1.1",
     "expo-file-system": "~18.1.10",
     "expo-linear-gradient": "^56.0.4",
+    "expo-local-authentication": "^57.0.0",
     "expo-notifications": "~56.0.18",
     "expo-sharing": "~13.1.2",
     "expo-status-bar": "~56.0.4",
@@ -33,7 +34,15 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "build": "expo export -p web"
+    "build": "expo export -p web",
+    "test": "jest"
   },
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "@babel/core": "^8.0.1",
+    "@babel/preset-env": "^8.0.2",
+    "@testing-library/react-native": "^14.0.1",
+    "babel-jest": "^30.4.1",
+    "jest": "^30.4.2"
+  }
 }

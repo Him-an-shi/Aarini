@@ -1,17 +1,17 @@
-import React, { useEffect, useMemo, useRef } from 'react';
-import { StyleSheet, View, Text, Animated, ActivityIndicator } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Flower } from 'lucide-react-native';
-import { useTheme } from '../context/ThemeContext';
+import React, { useEffect, useMemo, useRef } from 'react'
+import { StyleSheet, View, Text, Animated, ActivityIndicator } from 'react-native'
+import { LinearGradient } from 'expo-linear-gradient'
+import { Flower } from 'lucide-react-native'
+import { useTheme } from '../context/ThemeContext'
 
 export const SplashScreen = ({ navigation }) => {
-  const { theme } = useTheme();
-  const { colors, typography } = theme;
-  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { theme } = useTheme()
+  const { colors, typography } = theme
+  const styles = useMemo(() => createStyles(theme), [theme])
   // Animation values for smooth welcome fades
-  const logoOpacity = useRef(new Animated.Value(0)).current;
-  const logoScale = useRef(new Animated.Value(0.85)).current;
-  const textOpacity = useRef(new Animated.Value(0)).current;
+  const logoOpacity = useRef(new Animated.Value(0)).current
+  const logoScale = useRef(new Animated.Value(0.85)).current
+  const textOpacity = useRef(new Animated.Value(0)).current
 
   useEffect(() => {
     // Parallel animations: Fade in logo and scale up smoothly
@@ -36,12 +36,12 @@ export const SplashScreen = ({ navigation }) => {
       }).start(() => {
         // Redirect to Login page after a calm 2-second pause
         const timer = setTimeout(() => {
-          navigation.replace('Login');
-        }, 2200);
-        return () => clearTimeout(timer);
-      });
-    });
-  }, [logoOpacity, logoScale, textOpacity, navigation]);
+          navigation.replace('Login')
+        }, 2200)
+        return () => clearTimeout(timer)
+      })
+    })
+  }, [logoOpacity, logoScale, textOpacity, navigation])
 
   return (
     <View style={styles.container}>
@@ -66,7 +66,10 @@ export const SplashScreen = ({ navigation }) => {
           </Animated.View>
 
           {/* Text Fades */}
-          <Animated.View style={[styles.textContainer, { opacity: textOpacity }]} accessibilityRole="header">
+          <Animated.View
+            style={[styles.textContainer, { opacity: textOpacity }]}
+            accessibilityRole="header"
+          >
             <Text style={[typography.h1, styles.brandName]}>Aarini</Text>
             <Text style={[typography.bodyLarge, styles.tagline]}>
               Hormonal Wellness & Period Companion
@@ -74,7 +77,10 @@ export const SplashScreen = ({ navigation }) => {
           </Animated.View>
 
           {/* Safe Private Indicator */}
-          <Animated.View style={[styles.footerContainer, { opacity: textOpacity }]} importantForAccessibility="no">
+          <Animated.View
+            style={[styles.footerContainer, { opacity: textOpacity }]}
+            importantForAccessibility="no"
+          >
             <ActivityIndicator size="small" color={colors.primaryDark} style={styles.loader} />
             <Text style={[typography.caption, styles.secureLabel]}>
               🔒 Secure, private, and encrypted
@@ -83,66 +89,67 @@ export const SplashScreen = ({ navigation }) => {
         </View>
       </LinearGradient>
     </View>
-  );
-};
+  )
+}
 
-const createStyles = ({ colors }) => StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  background: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 40,
-    width: '100%',
-  },
-  logoContainer: {
-    marginBottom: 24,
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.22,
-    shadowRadius: 16,
-    elevation: 5,
-  },
-  flowerIcon: {
-    backgroundColor: colors.cardBackground,
-    padding: 24,
-    borderRadius: 36,
-    borderWidth: 2,
-    borderColor: colors.border,
-  },
-  textContainer: {
-    alignItems: 'center',
-    marginBottom: 48,
-  },
-  brandName: {
-    fontSize: 42,
-    fontWeight: '700',
-    letterSpacing: 0,
-    marginBottom: 8,
-    color: colors.textDark,
-  },
-  tagline: {
-    textAlign: 'center',
-    color: colors.textMedium,
-    fontSize: 15,
-    paddingHorizontal: 20,
-  },
-  footerContainer: {
-    position: 'absolute',
-    bottom: 50,
-    alignItems: 'center',
-  },
-  loader: {
-    marginBottom: 12,
-  },
-  secureLabel: {
-    color: colors.textLight,
-  },
-});
+const createStyles = ({ colors }) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    background: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    content: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: 40,
+      width: '100%',
+    },
+    logoContainer: {
+      marginBottom: 24,
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.22,
+      shadowRadius: 16,
+      elevation: 5,
+    },
+    flowerIcon: {
+      backgroundColor: colors.cardBackground,
+      padding: 24,
+      borderRadius: 36,
+      borderWidth: 2,
+      borderColor: colors.border,
+    },
+    textContainer: {
+      alignItems: 'center',
+      marginBottom: 48,
+    },
+    brandName: {
+      fontSize: 42,
+      fontWeight: '700',
+      letterSpacing: 0,
+      marginBottom: 8,
+      color: colors.textDark,
+    },
+    tagline: {
+      textAlign: 'center',
+      color: colors.textMedium,
+      fontSize: 15,
+      paddingHorizontal: 20,
+    },
+    footerContainer: {
+      position: 'absolute',
+      bottom: 50,
+      alignItems: 'center',
+    },
+    loader: {
+      marginBottom: 12,
+    },
+    secureLabel: {
+      color: colors.textLight,
+    },
+  })

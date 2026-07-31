@@ -1,80 +1,92 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
-  Alert, SafeAreaView, ScrollView, StyleSheet, Switch,
-  Text, TouchableOpacity, View,
-} from 'react-native';
-import { ArrowLeft, Bell, BellOff, Clock, Moon } from 'lucide-react-native';
-import { useTheme } from '../context/ThemeContext';
-import { useLanguage } from '../i18n/LanguageContext';
+  Alert,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native'
+import { ArrowLeft, Bell, BellOff, Clock, Moon } from 'lucide-react-native'
+import { useTheme } from '../context/ThemeContext'
+import { useLanguage } from '../i18n/LanguageContext'
 import {
   getNotificationPrefs,
   requestNotificationPermission,
   saveNotificationPrefs,
   scheduleAllNotifications,
   cancelAllScheduledNotifications,
-} from '../services/notificationScheduler';
+} from '../services/notificationScheduler'
 
-const LEAD_OPTIONS = [1, 2, 3];
-const HOUR_OPTIONS = [7, 8, 9, 10, 12, 14, 18, 20];
+const LEAD_OPTIONS = [1, 2, 3]
+const HOUR_OPTIONS = [7, 8, 9, 10, 12, 14, 18, 20]
 
 const formatHour = (hour) => {
-  const period = hour >= 12 ? 'PM' : 'AM';
-  const display = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
-  return `${display}:00 ${period}`;
-};
+  const period = hour >= 12 ? 'PM' : 'AM'
+  const display = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour
+  return `${display}:00 ${period}`
+}
 
 export const NotificationPrefsScreen = ({ navigation, route }) => {
-  const { theme } = useTheme();
-  const { t } = useLanguage();
-  const { colors, typography, spacing, borderRadius, shadows } = theme;
-  const styles = useMemo(() => createStyles(theme), [theme]);
-  const prediction = route?.params?.prediction;
+  const { theme } = useTheme()
+  const { t } = useLanguage()
+  const { colors, typography, spacing, borderRadius, shadows } = theme
+  const styles = useMemo(() => createStyles(theme), [theme])
+  const prediction = route?.params?.prediction
 
-  const [prefs, setPrefs] = useState(null);
-  const [permissionGranted, setPermissionGranted] = useState(false);
+  const [prefs, setPrefs] = useState(null)
+  const [permissionGranted, setPermissionGranted] = useState(false)
 
   useEffect(() => {
     const load = async () => {
-      const stored = await getNotificationPrefs();
-      setPrefs(stored);
-      const granted = await requestNotificationPermission();
-      setPermissionGranted(granted);
-    };
-    load();
-  }, []);
-
-  const updatePref = useCallback(async (key, value) => {
-    const next = { ...prefs, [key]: value };
-    setPrefs(next);
-    await saveNotificationPrefs(next);
-    if (prediction) {
-      await scheduleAllNotifications(prediction);
+      const stored = await getNotificationPrefs()
+      setPrefs(stored)
+      const granted = await requestNotificationPermission()
+      setPermissionGranted(granted)
     }
-  }, [prefs, prediction]);
+    load()
+  }, [])
 
-  const handleToggle = useCallback(async (key, value) => {
-    if (value && !permissionGranted) {
-      const granted = await requestNotificationPermission();
-      setPermissionGranted(granted);
-      if (!granted) {
-        Alert.alert(
-          'Permission required',
-          'Enable notifications in your device settings to receive reminders.',
-        );
-        return;
+  const updatePref = useCallback(
+    async (key, value) => {
+      const next = { ...prefs, [key]: value }
+      setPrefs(next)
+      await saveNotificationPrefs(next)
+      if (prediction) {
+        await scheduleAllNotifications(prediction)
       }
-    }
-    await updatePref(key, value);
-    if (!value) {
-      const next = { ...prefs, [key]: false };
-      const anyEnabled = next.periodReminder || next.fertileReminder || next.dailyMoodReminder;
-      if (!anyEnabled) {
-        await cancelAllScheduledNotifications();
-      }
-    }
-  }, [prefs, permissionGranted, updatePref]);
+    },
+    [prefs, prediction],
+  )
 
-  if (!prefs) return null;
+  const handleToggle = useCallback(
+    async (key, value) => {
+      if (value && !permissionGranted) {
+        const granted = await requestNotificationPermission()
+        setPermissionGranted(granted)
+        if (!granted) {
+          Alert.alert(
+            'Permission required',
+            'Enable notifications in your device settings to receive reminders.',
+          )
+          return
+        }
+      }
+      await updatePref(key, value)
+      if (!value) {
+        const next = { ...prefs, [key]: false }
+        const anyEnabled = next.periodReminder || next.fertileReminder || next.dailyMoodReminder
+        if (!anyEnabled) {
+          await cancelAllScheduledNotifications()
+        }
+      }
+    },
+    [prefs, permissionGranted, updatePref],
+  )
+
+  if (!prefs) return null
 
   return (
     <SafeAreaView style={styles.container}>
@@ -132,7 +144,12 @@ export const NotificationPrefsScreen = ({ navigation, route }) => {
                     accessibilityRole="radio"
                     accessibilityState={{ selected: prefs.periodLeadDays === days }}
                   >
-                    <Text style={[styles.chipText, prefs.periodLeadDays === days && styles.chipTextActive]}>
+                    <Text
+                      style={[
+                        styles.chipText,
+                        prefs.periodLeadDays === days && styles.chipTextActive,
+                      ]}
+                    >
                       {days === 1 ? '1 day before' : `${days} days before`}
                     </Text>
                   </TouchableOpacity>
@@ -144,7 +161,9 @@ export const NotificationPrefsScreen = ({ navigation, route }) => {
 
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <View style={[styles.cardIcon, { backgroundColor: (colors.accent || '#FDE68A') + '30' }]}>
+            <View
+              style={[styles.cardIcon, { backgroundColor: (colors.accent || '#FDE68A') + '30' }]}
+            >
               <Bell size={20} color={colors.accentDark || '#D97706'} />
             </View>
             <Text style={typography.h3}>Fertile Window</Text>
@@ -165,7 +184,9 @@ export const NotificationPrefsScreen = ({ navigation, route }) => {
 
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <View style={[styles.cardIcon, { backgroundColor: (colors.secondary || '#A78BFA') + '30' }]}>
+            <View
+              style={[styles.cardIcon, { backgroundColor: (colors.secondary || '#A78BFA') + '30' }]}
+            >
               <Clock size={20} color={colors.secondaryDark || '#7C3AED'} />
             </View>
             <Text style={typography.h3}>Daily Mood Reminder</Text>
@@ -194,7 +215,12 @@ export const NotificationPrefsScreen = ({ navigation, route }) => {
                     accessibilityRole="radio"
                     accessibilityState={{ selected: prefs.moodReminderHour === hour }}
                   >
-                    <Text style={[styles.chipText, prefs.moodReminderHour === hour && styles.chipTextActive]}>
+                    <Text
+                      style={[
+                        styles.chipText,
+                        prefs.moodReminderHour === hour && styles.chipTextActive,
+                      ]}
+                    >
                       {formatHour(hour)}
                     </Text>
                   </TouchableOpacity>
@@ -212,7 +238,8 @@ export const NotificationPrefsScreen = ({ navigation, route }) => {
             <Text style={typography.h3}>Quiet Hours</Text>
           </View>
           <Text style={styles.description}>
-            No notifications between 10 PM and 7 AM. Reminders scheduled during this time will be delivered after quiet hours end.
+            No notifications between 10 PM and 7 AM. Reminders scheduled during this time will be
+            delivered after quiet hours end.
           </Text>
           <View style={styles.toggleRow}>
             <Text style={styles.toggleLabel}>Enable quiet hours</Text>
@@ -226,29 +253,91 @@ export const NotificationPrefsScreen = ({ navigation, route }) => {
         </View>
       </ScrollView>
     </SafeAreaView>
-  );
-};
+  )
+}
 
 const createStyles = ({ colors, typography, spacing, borderRadius, shadows }) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
     scrollContent: { padding: spacing.lg, paddingBottom: spacing.xxl },
-    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.lg },
-    backButton: { width: 40, height: 40, borderRadius: 999, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.cardBackground },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: spacing.lg,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 999,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.cardBackground,
+    },
     headerTitle: { flex: 1, textAlign: 'center' },
-    warningCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: '#FEF2F2', borderRadius: borderRadius.md, padding: spacing.md, marginBottom: spacing.lg, borderWidth: 1, borderColor: '#FECACA' },
+    warningCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      backgroundColor: '#FEF2F2',
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      marginBottom: spacing.lg,
+      borderWidth: 1,
+      borderColor: '#FECACA',
+    },
     warningText: { ...typography.bodySmall, color: '#991B1B', flex: 1 },
-    card: { backgroundColor: colors.cardBackground, borderRadius: borderRadius.lg, padding: spacing.lg, marginBottom: spacing.md, ...shadows.light },
-    cardHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.sm },
-    cardIcon: { width: 44, height: 44, borderRadius: borderRadius.md, backgroundColor: colors.primary || '#EDE9FE', alignItems: 'center', justifyContent: 'center' },
+    card: {
+      backgroundColor: colors.cardBackground,
+      borderRadius: borderRadius.lg,
+      padding: spacing.lg,
+      marginBottom: spacing.md,
+      ...shadows.light,
+    },
+    cardHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+      marginBottom: spacing.sm,
+    },
+    cardIcon: {
+      width: 44,
+      height: 44,
+      borderRadius: borderRadius.md,
+      backgroundColor: colors.primary || '#EDE9FE',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
     description: { ...typography.bodyMedium, color: colors.textMedium, marginBottom: spacing.md },
-    toggleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.sm },
+    toggleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: spacing.sm,
+    },
     toggleLabel: { ...typography.bodyMedium, color: colors.textDark, fontWeight: '600' },
-    optionSection: { marginTop: spacing.md, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border },
-    optionLabel: { ...typography.bodySmall, color: colors.textMedium, fontWeight: '700', marginBottom: spacing.sm },
+    optionSection: {
+      marginTop: spacing.md,
+      paddingTop: spacing.md,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    optionLabel: {
+      ...typography.bodySmall,
+      color: colors.textMedium,
+      fontWeight: '700',
+      marginBottom: spacing.sm,
+    },
     chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
-    chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: borderRadius.round || 999, backgroundColor: colors.mutedBackground || '#F1F5F9', borderWidth: 1.5, borderColor: colors.border },
+    chip: {
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: borderRadius.round || 999,
+      backgroundColor: colors.mutedBackground || '#F1F5F9',
+      borderWidth: 1.5,
+      borderColor: colors.border,
+    },
     chipActive: { backgroundColor: colors.primaryDark, borderColor: colors.primaryDark },
     chipText: { ...typography.bodySmall, color: colors.textMedium, fontWeight: '600' },
     chipTextActive: { color: colors.white || '#FFFFFF' },
-  });
+  })

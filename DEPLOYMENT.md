@@ -7,6 +7,7 @@ This repository contains a full-stack health application with an Expo React Nati
 ## 1. Prerequisites & Environment Variables
 
 Make sure you have accounts and projects set up on:
+
 - [Vercel](https://vercel.com/) (Frontend Hosting)
 - [Render](https://render.com/) (Backend Web Service)
 - [Firebase Console](https://console.firebase.google.com/) (Authentication & Firestore Database)
@@ -14,16 +15,16 @@ Make sure you have accounts and projects set up on:
 
 ### Backend Environment Variables (Render)
 
-| Variable Name | Purpose | Example / How to Obtain |
-|---|---|---|
-| `FLASK_ENV` | Run mode | `production` |
-| `GEMINI_API_KEY` | Empathetic health assistant key | Obtain from Google AI Studio |
+| Variable Name                   | Purpose                                  | Example / How to Obtain                               |
+| ------------------------------- | ---------------------------------------- | ----------------------------------------------------- |
+| `FLASK_ENV`                     | Run mode                                 | `production`                                          |
+| `GEMINI_API_KEY`                | Empathetic health assistant key          | Obtain from Google AI Studio                          |
 | `FIREBASE_SERVICE_ACCOUNT_JSON` | Firebase authentication & db credentials | Minified single-line JSON of your Service Account Key |
 
 ### Frontend Environment Variables (Vercel)
 
-| Variable Name | Purpose | Example / How to Obtain |
-|---|---|---|
+| Variable Name         | Purpose                 | Example / How to Obtain                                        |
+| --------------------- | ----------------------- | -------------------------------------------------------------- |
 | `EXPO_PUBLIC_API_URL` | Endpoint of backend API | E.g. `https://aarini-backend.onrender.com` (no trailing slash) |
 
 ---

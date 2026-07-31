@@ -42,7 +42,9 @@ def register_error_handlers(app):
     @app.errorhandler(429)
     def handle_rate_limit(error):
         logger.warning(f"Rate limited: {str(error)}")
-        return jsonify({"error": "Too many requests. Please slow down.", "code": "RATE_LIMITED"}), 429
+        from middleware.rate_limit import rate_limit_exceeded_handler
+        return rate_limit_exceeded_handler(error)
+
 
     @app.errorhandler(500)
     def handle_internal_error(error):

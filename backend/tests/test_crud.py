@@ -154,4 +154,13 @@ class TestUpdateSymptom:
         uid = "test_user_001"
         mock_symptoms[uid] = [{"id": "sym_sev_1", "type": "Cramps", "severity": "Low", "date": "2026-05-20"}]
 
-        resp = client.put("/symptoms/sym
+        resp = client.put(
+            "/symptoms/sym_sev_1",
+            json={
+                "type": "Cramps",
+                "severity": "Super Extreme",
+                "date": "2026-05-20",
+            },
+            headers=auth_headers,
+        )
+        assert resp.status_code == 400

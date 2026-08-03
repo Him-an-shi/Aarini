@@ -59,6 +59,42 @@ class TestChat:
 
         assert resp.status_code == 200
 
+    def test_chat_requires_token(self, client, monkeypatch):
+        """POST /chat with no Authorization header returns 401 in production mode."""
+        import app as app_module
+
+        monkeypatch.setattr(app_module, "firebase_initialized", True)
+        payload = {"message": "Why do I feel tired before my period?"}
+        resp = client.post(
+            "/chat",
+            headers={"Content-Type": "application/json"},
+            json=payload,
+        )
+
+        assert resp.status_code == 401
+
+    def test_chat_rejects_invalid_token(self, client, monkeypatch):
+        """POST /chat with an invalid/expired token returns 401 in production mode."""
+        import app as app_module
+
+        def _reject(_token):
+            raise Exception("invalid token")
+
+        monkeypatch.setattr(app_module, "firebase_initialized", True)
+        monkeypatch.setattr(app_module.auth, "verify_id_token", _reject)
+        payload = {"message": "Why do I feel tired before my period?"}
+        resp = client.post(
+            "/chat",
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": "Bearer bad.token",
+            },
+            json=payload,
+        )
+
+        assert resp.status_code == 401
+
+
 
 class TestInsights:
     """GET /insights endpoint tests."""

@@ -1,0 +1,33 @@
+name: ✨ Feature Request
+description: Suggest an idea to make Aarini even better
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### 🌸 Welcome to Aarini!
+        We believe the best health tools are built by diverse, passionate communities. Thank you for your idea to help Aarini empower women's hormonal wellness! 💜
+  - type: textarea
+    id: description
+    attributes:
+      label: Feature Description
+      description: A clear and concise description of the feature you are requesting.
+      placeholder: e.g. "I would like to see an integration for wearable devices to sync heart rate data..."
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem it Solves
+      description: Is your feature request related to a problem? Please describe.
+      placeholder: e.g. "Currently, I have to manually log my sleep, which is frustrating because..."
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: A clear and concise description of any alternative solutions or features you've considered.
+    validations:
+      required: false

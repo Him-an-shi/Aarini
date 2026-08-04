@@ -21,6 +21,8 @@ import { OnboardingScreen } from '../screens/OnboardingScreen'
 import { NotificationPrefsScreen } from '../screens/NotificationPrefsScreen'
 import { MedicationScreen } from '../screens/MedicationScreen'
 import { CycleDetailScreen } from '../screens/CycleDetailScreen'
+import { HealthDashboardScreen } from '../screens/HealthDashboardScreen'
+import { AchievementsScreen } from '../screens/AchievementsScreen'
 
 const Stack = createStackNavigator()
 const Tab = createBottomTabNavigator()

@@ -241,3 +241,13 @@ class TestDeleteSymptom:
 
         assert len(mock_symptoms["user_a"]) == 1
         assert mock_symptoms["user_a"][0]["id"] == "sym_del_user_a"
+        resp = client.put(
+            "/symptoms/sym_sev_1",
+            json={
+                "type": "Cramps",
+                "severity": "Super Extreme",
+                "date": "2026-05-20",
+            },
+            headers=auth_headers,
+        )
+        assert resp.status_code == 400

@@ -14,12 +14,24 @@ Supports:
 - Comprehensive error aggregation (returns ALL errors with JSON-path locations)
 """
 
+import math
 import re
+from datetime import datetime
 from functools import wraps
 from flask import request, jsonify
-from datetime import datetime
+
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
+def _check_field(value, rules, _field_name):
+    """Validate a single field against its rules. Returns an error or ``None``."""
+    field_type = rules.get("type", "string")
+
+    if value is None or (isinstance(value, str) and not value.strip()):
+        if rules.get("required", False):
+            return "Required"
+        return None
+=======
 EMAIL_RE = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
 
 # Type coercion table: (target_type, coercion_function)
@@ -117,10 +129,20 @@ def _check_field_deep(value, rules, field_path, full_body=None, coerce=True):
         if not isinstance(value, str) or not EMAIL_RE.match(value):
             errors.append((field_path, "Must be a valid email address"))
 
+
+    elif field_type == "number":
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            return "Must be a number"
+        if not math.isfinite(value):
+            return "Must be a finite number"
+        if rules.get("integer") and not isinstance(value, int):
+            return "Must be an integer"
+
     elif field_type in ("number", "float"):
         if not isinstance(value, (int, float)):
             errors.append((field_path, "Must be a number"))
             return errors, value
+
         min_val = rules.get("min")
         max_val = rules.get("max")
         if min_val is not None and value < min_val:
@@ -143,6 +165,25 @@ def _check_field_deep(value, rules, field_path, full_body=None, coerce=True):
         if not isinstance(value, bool):
             errors.append((field_path, "Must be a boolean"))
 
+
+    elif field_type == "array" and not isinstance(value, list):
+        return "Must be an array"
+
+    allowed_values = rules.get("allowed")
+    if allowed_values is not None:
+        comparable_value = (
+            value.lower()
+            if rules.get("case_insensitive") and isinstance(value, str)
+            else value
+        )
+        comparable_allowed = (
+            {item.lower() for item in allowed_values}
+            if rules.get("case_insensitive")
+            else set(allowed_values)
+        )
+        if comparable_value not in comparable_allowed:
+            return f"Must be one of: {', '.join(allowed_values)}"
+
     elif field_type == "array":
         if not isinstance(value, list):
             errors.append((field_path, "Must be an array"))
@@ -153,6 +194,7 @@ def _check_field_deep(value, rules, field_path, full_body=None, coerce=True):
             errors.append((field_path, f"Must have at least {min_len} items"))
         if max_len is not None and len(value) > max_len:
             errors.append((field_path, f"Must have at most {max_len} items"))
+
 
         # Validate each array element against items schema
         items_schema = rules.get("items")
@@ -228,6 +270,8 @@ def _check_field(value, rules, field_name):
 
 
 def validate_request(schema):
+
+    """Validate a request JSON body against a schema before a handler runs."""
     """
     Decorator that validates request JSON body against a schema.
 
@@ -257,12 +301,33 @@ def validate_request(schema):
 
     Returns 400 with field-level errors (JSON-path locations) if validation fails.
     """
+
     def decorator(f):
         @wraps(f)
         def wrapped(*args, **kwargs):
             body = request.get_json(silent=True)
             if body is None:
                 body = {}
+            elif not isinstance(body, dict):
+                return (
+                    jsonify(
+                        {
+                            "error": "Validation failed",
+                            "fields": {"body": "Must be a JSON object"},
+                        }
+                    ),
+                    400,
+                )
+
+
+            errors = {}
+            for field_name, rules in schema.items():
+                error = _check_field(body.get(field_name), rules, field_name)
+                if error:
+                    errors[field_name] = error
+
+            if errors:
+                return jsonify({"error": "Validation failed", "fields": errors}), 400
 
             all_errors = _validate_object(body, schema)
 
@@ -321,5 +386,7 @@ def validate_request_deep(schema, coerce=True):
                 }), 400
 
             return f(*args, **kwargs)
+
         return wrapped
+
     return decorator

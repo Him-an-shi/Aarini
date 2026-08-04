@@ -72,6 +72,33 @@ class TestPredictionFeedbackUnit:
         assert bias is not None
         assert bias > 0
 
+    def test_compute_bias_detects_negative_pattern(self):
+        """Verify that consistently early periods compute a negative bias (< 0)."""
+        from prediction_feedback import compute_bias
+        errors = [
+            {"errorDays": -2},
+            {"errorDays": -3},
+            {"errorDays": -2},
+            {"errorDays": -1},
+        ]
+        bias = compute_bias(errors)
+        assert bias is not None
+        assert bias < 0
+
+    def test_compute_bias_neutral_fluctuation(self):
+        """Verify that wildly fluctuating error inputs result in negligible/zero bias."""
+        from prediction_feedback import compute_bias
+        errors = [
+            {"errorDays": 3},
+            {"errorDays": -3},
+            {"errorDays": 2},
+            {"errorDays": -2},
+        ]
+        bias = compute_bias(errors)
+        # Depending on implementation, bias is either None, exactly 0.0, or very close to 0
+        if bias is not None:
+            assert abs(bias) < 0.1
+
     def test_adaptive_correction(self):
         from prediction_feedback import get_adaptive_correction
         cycles = [

@@ -50,5 +50,8 @@
     "transform": {
       "^.+\\.[jt]sx?$": "babel-jest"
     }
+  },
+  "overrides": {
+    "postcss": "8.5.18"
   }
 }

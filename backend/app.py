@@ -73,6 +73,39 @@ try:
 except Exception as e:
     logger.error(f"Error initializing Firebase Admin: {str(e)}")
 
+# Fail closed: refuse to serve without authentication.
+#
+# Every branch above catches its own failure and continues, so a missing or
+# malformed FIREBASE_SERVICE_ACCOUNT_JSON, a revoked key, or an import error
+# leaves firebase_initialized False and the app starting normally. The
+# authenticated_user decorator then takes the caller's identity from an
+# X-User-Id header with no token and no verification — which is correct for
+# local development and catastrophic anywhere else.
+#
+# The failure is silent by construction: the deploy goes green, GET / answers
+# 200, and every route serving cycle, symptom, mood and profile data accepts an
+# arbitrary user id. Nothing distinguishes that state from a healthy one.
+#
+# A crashed deploy is loud and fixed in minutes. A running deploy with no
+# authentication on health records is neither.
+if not firebase_initialized and os.getenv("FLASK_ENV", "").lower() != "development":
+    raise RuntimeError(
+        "Firebase Admin failed to initialise and FLASK_ENV is not 'development'. "
+        "Refusing to start: every authenticated route would accept an unverified "
+        "X-User-Id header. Check FIREBASE_SERVICE_ACCOUNT_JSON or "
+        "FIREBASE_CREDENTIALS_PATH, or set FLASK_ENV=development to run without "
+        "authentication locally."
+    )
+
+if not firebase_initialized:
+    # Reached only with FLASK_ENV=development. Logged at critical because an
+    # unauthenticated backend is never a routine condition, even locally.
+    logger.critical(
+        "Firebase is not initialised and FLASK_ENV=development: authentication "
+        "is DISABLED. Every request may choose its own user id. Never run this "
+        "configuration anywhere reachable from a network."
+    )
+
 # --- Gemini Model Initialization (cached singleton) ---
 _gemini_model = None
 SYSTEM_INSTRUCTION = (
@@ -514,7 +547,6 @@ def get_cycle_prediction():
         "allowed": ["Great", "Good", "Okay", "Low", "Bad", "Neutral"],
         "case_insensitive": True
     },
-})
 })
 def update_cycle(cycle_id):
     """

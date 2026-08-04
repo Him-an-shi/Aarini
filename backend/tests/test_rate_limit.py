@@ -84,6 +84,32 @@ class TestLoginRateLimit:
         assert data["code"] == "RATE_LIMITED"
 
 
+class TestAccountRateLimit:
+    """Delete Account: 3 per hour per user/IP."""
+
+    def test_delete_account_blocks_over_limit(self, limited_client):
+        # Hit DELETE /delete-account 3 times successfully (or until limit), then 4th time triggers 429
+        for _ in range(3):
+            limited_client.delete("/delete-account")
+        resp = limited_client.delete("/delete-account")
+        assert resp.status_code == 429
+        data = resp.get_json()
+        assert data["code"] == "RATE_LIMITED"
+
+
+class TestShareRateLimit:
+    """Share Create: 10 per hour per user/IP."""
+
+    def test_share_create_blocks_over_limit(self, limited_client):
+        payload = {"cycleId": "test_cycle_123"}
+        for _ in range(10):
+            limited_client.post("/share/create", json=payload)
+        resp = limited_client.post("/share/create", json=payload)
+        assert resp.status_code == 429
+        data = resp.get_json()
+        assert data["code"] == "RATE_LIMITED"
+
+
 class TestChatRateLimit:
     """Chat endpoint rate limit tests."""
     pass

@@ -3,6 +3,7 @@ import logging
 import secrets
 import time
 import json
+from flask_smorest import Api
 from datetime import datetime, date
 from functools import wraps
 from flask import Flask, request, jsonify, Response
@@ -24,6 +25,17 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 app = Flask(__name__)
+app.config["API_TITLE"] = "Aarini API"
+app.config["API_VERSION"] = "v1"
+app.config["OPENAPI_VERSION"] = "3.0.3"
+app.config["OPENAPI_URL_PREFIX"] = "/"
+app.config["OPENAPI_SWAGGER_UI_PATH"] = "/docs"
+app.config["OPENAPI_SWAGGER_UI_URL"] = "https://cdn.jsdelivr.net/npm/swagger-ui-dist/"
+api = Api(app)
+# NOTE:
+# Existing routes currently use Flask's @app.route decorators.
+# Future work can gradually migrate routes to Flask-Smorest Blueprints
+# to enable automatic OpenAPI documentation without changing API behavior.
 
 # CORS: restrict origins in production, allow all in development
 allowed_origins = os.getenv("ALLOWED_ORIGINS", "").split(",")
@@ -514,7 +526,6 @@ def get_cycle_prediction():
         "allowed": ["Great", "Good", "Okay", "Low", "Bad", "Neutral"],
         "case_insensitive": True
     },
-})
 })
 def update_cycle(cycle_id):
     """
@@ -1314,6 +1325,9 @@ def create_share_link():
         "shareUrl": f"/share/view/{token}",
     }), 201
     # Startup summary
+if __name__ == "__main__":
+    port = int(os.getenv("PORT", 5000))
+    debug_mode = os.getenv("FLASK_DEBUG", "True").lower() == "true"
     gemini_status = "configured" if os.getenv("GEMINI_API_KEY") else "mock (no GEMINI_API_KEY)"
     firebase_status = "connected" if firebase_initialized else "mock"
     cors_status = ", ".join(allowed_origins) if allowed_origins else "all origins (dev mode)"

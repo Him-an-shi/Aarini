@@ -31,7 +31,7 @@ def _check_field(value, rules, _field_name):
         if rules.get("required", False):
             return "Required"
         return None
-=======
+
 EMAIL_RE = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
 
 # Type coercion table: (target_type, coercion_function)

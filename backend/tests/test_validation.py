@@ -68,7 +68,7 @@ def test_validation_rejects_non_object_json(client, json_headers):
 
     assert response.status_code == 400
     assert response.get_json()["fields"] == {"body": "Must be a JSON object"}
-=======
+
 """
 Tests for schema-based request validation middleware (middleware/validation.py).
 

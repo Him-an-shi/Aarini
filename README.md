@@ -13,8 +13,7 @@
 ---
 
 </div>
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Him-an-shi/Aarini)
-
+<a href="https://deepwiki.com/Him-an-shi/Aarini"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
 ## 📖 Table of Contents
 
 - [✨ About Aarini](#-about-aarini)
